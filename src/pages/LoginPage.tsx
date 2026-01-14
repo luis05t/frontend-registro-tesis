@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useNavigate, Link } from "react-router-dom"
-import axios from "axios"
+// CAMBIO 1: Importamos nuestra instancia 'api' en lugar de 'axios'
+import api from "@/api/axios" 
 import { useAuthStore } from "@/store/authStore"
 import { Eye, EyeOff, AlertCircle } from "lucide-react"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
@@ -21,16 +22,13 @@ const LoginPage = () => {
 
   const [showPassword, setShowPassword] = useState(false)
 
-  // Usamos el evento del formulario (e)
   const handleLogin = useCallback(async (e?: React.FormEvent) => {
-    // PREVENIR RECARGA AL DAR ENTER
     if (e) e.preventDefault()
 
     setEmailError("")
     setPasswordError("")
     setGeneralError("")
     
-    // VALIDACIÓN LOCAL (Para que salgan rojos ambos si están vacíos)
     let hasLocalError = false;
     if (!email.trim()) {
         setEmailError("El correo es obligatorio");
@@ -50,7 +48,8 @@ const LoginPage = () => {
     setLoading(true)
     
     try {
-      const res = await axios.post("http://localhost:8000/api/auth/login", { email, password })
+      // CAMBIO 2: Usamos 'api.post' y quitamos 'http://localhost:8000'
+      const res = await api.post("/api/auth/login", { email, password })
       const { accessToken, userId, userRole } = res.data
 
       localStorage.setItem("token", accessToken)
@@ -99,9 +98,7 @@ const LoginPage = () => {
       <div className="w-full max-w-sm p-8 bg-gray-800 rounded-2xl shadow-lg space-y-6 text-gray-100">
         <h1 className="text-2xl font-bold text-center text-white ">Iniciar Sesión</h1>
 
-        {/* <form> permite que funcione el ENTER */}
         <form onSubmit={handleLogin} className="space-y-4">
-          
           <div>
             <Label className="text-gray-300 py-3">Email</Label>
             <Input
@@ -135,7 +132,6 @@ const LoginPage = () => {
                 }`}
               />
               
-              {/* AQUÍ ESTABA EL ERROR: He dejado solo UN type="button" */}
               <button
                 type="button" 
                 onClick={() => setShowPassword(!showPassword)}
@@ -152,7 +148,6 @@ const LoginPage = () => {
             )}
           </div>
 
-          {/* El botón Submit envía el formulario al dar Enter */}
           <Button
             type="submit" 
             disabled={loading} 
@@ -160,7 +155,6 @@ const LoginPage = () => {
           >
             {loading ? "Cargando..." : "Iniciar Sesión"}
           </Button>
-
         </form>
         
         {generalError && (

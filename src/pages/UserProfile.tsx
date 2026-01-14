@@ -1,5 +1,7 @@
 import SideBar from "@/components/SideBar"
-import axios from "axios"
+// CAMBIO 1: Eliminamos axios
+// import axios from "axios" (YA NO)
+import api from "@/api/axios"
 import { useEffect, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -39,15 +41,15 @@ const UserProfile = () => {
     if (!userId || !accessToken) return
     setLoading(true)
     try {
-      const headers = { Authorization: `Bearer ${accessToken}` }
-      
-      const userRes = await axios.get(`http://localhost:8000/api/users/${userId}`, { headers })
+      // CAMBIO 2: api.get y ruta relativa
+      const userRes = await api.get(`/api/users/${userId}`)
       const userData = userRes.data
       setUser(userData)
 
+      // CAMBIO 3: api.get en paralelo y rutas relativas
       const [careersRes, rolesRes] = await Promise.all([
-        axios.get("http://localhost:8000/api/careers", { headers }),
-        axios.get("http://localhost:8000/api/roles", { headers })
+        api.get("/api/careers"),
+        api.get("/api/roles")
       ])
 
       const foundCareer = careersRes.data.data.find((c: Career) => c.id === userData.careerId)
@@ -69,9 +71,8 @@ const UserProfile = () => {
 
     try {
       setLoading(true)
-      await axios.patch(`http://localhost:8000/api/users/${userId}`, { name }, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
+      // CAMBIO 4: api.patch y ruta relativa
+      await api.patch(`/api/users/${userId}`, { name })
       await loadProfile()
       setName('') // Limpiar después de guardar
     } catch (error) {
@@ -90,10 +91,11 @@ const UserProfile = () => {
 
     setUploading(true)
     try {
-      await axios.patch(`http://localhost:8000/api/users/${userId}/image`, formData, {
+      // CAMBIO 5: api.patch para subida de archivos
+      // No necesitamos configurar Authorization manualmente porque el interceptor lo hace
+      await api.patch(`/api/users/${userId}/image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${accessToken}`
         }
       })
       await loadProfile()
@@ -137,8 +139,10 @@ const UserProfile = () => {
                   </div>
                 ) : (
                   <>
+                    {/* CAMBIO 6: CORRECCIÓN DE URL DE IMAGEN */}
+                    {/* Usamos api.defaults.baseURL para obtener la URL base dinámica */}
                     <img 
-                      src={user?.image ? `http://localhost:8000${user.image}` : avatarPlaceholder} 
+                      src={user?.image ? `${api.defaults.baseURL}${user.image}` : avatarPlaceholder} 
                       alt="Avatar" 
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 group-hover:opacity-40" 
                       onError={(e) => { e.currentTarget.src = avatarPlaceholder }}

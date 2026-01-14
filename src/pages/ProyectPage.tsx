@@ -21,7 +21,7 @@ import {
   DialogDescription 
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import axios from "axios"
+import api from "@/api/axios"
 import { 
   Loader2, 
   CalendarIcon, 
@@ -138,7 +138,7 @@ const ProyectPage = () => {
   const [userProjects, setUserProjects] = useState<Project[]>([])
   
   // --- CREDENCIALES ---
-  const accessToken = localStorage.getItem("token")
+  // ELIMINADA LA LÍNEA DE accessToken QUE CAUSABA EL ERROR
   const userId = localStorage.getItem('id')
 
   // --- ESTADOS UI ---
@@ -153,7 +153,6 @@ const ProyectPage = () => {
   const [search, setSearch] = useState("")
   const [skillSearch, setSkillSearch] = useState("")
   
-  // NUEVO: Buscador específico para la ventana de Gestionar Habilidades
   const [manageSkillSearch, setManageSkillSearch] = useState("")
   
   const [filterStatus, setFilterStatus] = useState("Todo");
@@ -215,9 +214,7 @@ const ProyectPage = () => {
   const fetchProjects = async () => {
     setLoadingProjects(true)
     try {
-      const res = await axios.get("http://localhost:8000/api/projects", {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
+      const res = await api.get("/api/projects")
       setProjects(res.data.data || [])
     } catch (error) {
       console.log(error)
@@ -229,9 +226,7 @@ const ProyectPage = () => {
   const fetchUserProjects = async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`http://localhost:8000/api/users-projects/user/${userId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      const response = await api.get(`/api/users-projects/user/${userId}`);
       const projectsOnly = response.data.map((item: any) => item.project);
       setUserProjects(projectsOnly || []);
     } catch (error) {
@@ -241,14 +236,10 @@ const ProyectPage = () => {
 
   const fetchSkillsData = async () => {
     try {
-      const resSkills = await axios.get('http://localhost:8000/api/skills', {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
+      const resSkills = await api.get('/api/skills')
       setSkills(Array.isArray(resSkills.data) ? resSkills.data : resSkills.data.data || [])
       
-      const resProjectSkills = await axios.get('http://localhost:8000/api/porjects-skills', {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
+      const resProjectSkills = await api.get('/api/porjects-skills')
       setProjectSkills(resProjectSkills.data.data || [])
     } catch (error) {
       console.log(error)
@@ -259,8 +250,8 @@ const ProyectPage = () => {
     const fetchData = async () => {
       try {
         const [careersRes, rolesRes] = await Promise.all([
-          axios.get('http://localhost:8000/api/careers', { headers: { Authorization: `Bearer ${accessToken}` } }),
-          axios.get('http://localhost:8000/api/roles')
+          api.get('/api/careers'),
+          api.get('/api/roles')
         ])
         setCareers(careersRes.data.data || [])
         setRole(rolesRes.data.data || [])
@@ -275,9 +266,7 @@ const ProyectPage = () => {
     const fetchUser = async () => {
       if (!userId) return
       try {
-        const response = await axios.get(`http://localhost:8000/api/users/${userId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        })
+        const response = await api.get(`/api/users/${userId}`)
         setUser(response.data)
       } catch (error) {
         console.error(error)
@@ -320,11 +309,11 @@ const ProyectPage = () => {
   const handleCreateSkill = async (values: z.infer<typeof skillSchema>) => {
     setLoading(true)
     try {
-      await axios.post('http://localhost:8000/api/skills', {
+      await api.post('/api/skills', {
         name: values.name,
         description: values.description,
         details: { level: "N/A", category: "N/A" } 
-      }, { headers: { Authorization: `Bearer ${accessToken}` } })
+      })
       
       await fetchSkillsData();
       setSuccess(true);
@@ -343,11 +332,9 @@ const ProyectPage = () => {
     if (!editingSkill || !editSkillName.trim()) return
     setLoading(true)
     try {
-      await axios.patch(`http://localhost:8000/api/skills/${editingSkill.id}`, {
+      await api.patch(`/api/skills/${editingSkill.id}`, {
         name: editSkillName,
         description: editSkillDesc
-      }, {
-        headers: { Authorization: `Bearer ${accessToken}` }
       })
       await fetchSkillsData()
       setEditingSkill(null)
@@ -366,9 +353,7 @@ const ProyectPage = () => {
     if(!skillToDelete) return;
     setLoading(true)
     try {
-      await axios.delete(`http://localhost:8000/api/skills/${skillToDelete.id}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
+      await api.delete(`/api/skills/${skillToDelete.id}`)
       await fetchSkillsData()
       setDeleteSuccess(true)
       setSkillToDelete(null)
@@ -399,7 +384,7 @@ const ProyectPage = () => {
       if (values.link && values.link.trim() !== "") { deliverablesArray.push(values.link.trim()); }
       const initialStatus = values.status || "en progreso";
 
-      const res = await axios.post('http://localhost:8000/api/projects', {
+      const res = await api.post('/api/projects', {
         name: values.name,
         description: values.description,
         summary: values.summary,
@@ -416,10 +401,10 @@ const ProyectPage = () => {
 
       const projectId = res.data.id;
       if (projectId) {
-        await axios.post('http://localhost:8000/api/users-projects', { userId, projectId });
+        await api.post('/api/users-projects', { userId, projectId });
         if (selectedSkills.length > 0) {
           await Promise.all(selectedSkills.map(skillId =>
-            axios.post('http://localhost:8000/api/porjects-skills', { projectId, skillId })
+            api.post('/api/porjects-skills', { projectId, skillId })
           ));
         }
       }
@@ -445,7 +430,7 @@ const ProyectPage = () => {
     e.stopPropagation();
     setLoading(true);
     try {
-      await axios.patch(`http://localhost:8000/api/projects/${project.id}`, { status: "en progreso" });
+      await api.patch(`/api/projects/${project.id}`, { status: "en progreso" });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       await fetchProjects();
@@ -465,7 +450,7 @@ const ProyectPage = () => {
       let deliverablesArray = values.deliverables ? values.deliverables.split("\n").filter(l => l.trim().length > 0) : []
       if (values.link && values.link.trim() !== "") { deliverablesArray.push(values.link.trim()); }
 
-      await axios.patch(`http://localhost:8000/api/projects/${editingProject.id}`, {
+      await api.patch(`/api/projects/${editingProject.id}`, {
         name: values.name,
         description: values.description,
         summary: values.summary,
@@ -485,7 +470,7 @@ const ProyectPage = () => {
 
       if (skillsToAdd.length > 0) {
         await Promise.all(skillsToAdd.map(skillId =>
-          axios.post('http://localhost:8000/api/porjects-skills', { projectId: editingProject.id, skillId })
+          api.post('/api/porjects-skills', { projectId: editingProject.id, skillId })
         ));
       }
       setSuccess(true);
@@ -505,7 +490,7 @@ const ProyectPage = () => {
     e.stopPropagation()
     try {
       setLoading(true)
-      await axios.delete(`http://localhost:8000/api/projects/${id}`)
+      await api.delete(`/api/projects/${id}`)
       setDeleteSuccess(true)
       setTimeout(() => setDeleteSuccess(false), 3000)
       await fetchProjects()

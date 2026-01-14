@@ -2,7 +2,8 @@ import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import axios from "axios"
+// CAMBIO 1: Importar api
+import api from "@/api/axios"
 import { useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Check} from "lucide-react"
 import { Link } from "react-router-dom"
@@ -44,7 +45,8 @@ const RegisterPage = () => {
   useEffect(() => {
     const fetchCareers = async () => {
       try {
-        const res = await axios.get('http://localhost:8000/api/careers')
+        // CAMBIO 2: api.get y ruta corta
+        const res = await api.get('/api/careers')
         setCareers(res.data.data)
       } catch (error) {
         console.log('Error al obtener las carreras', error)
@@ -54,7 +56,8 @@ const RegisterPage = () => {
 
     const fetchRole = async () => {
       try {
-        const res = await axios.get('http://localhost:8000/api/roles')
+        // CAMBIO 3: api.get y ruta corta
+        const res = await api.get('/api/roles')
         setRole(res.data.data)
       } catch (error) {
         console.log('Error al obtener roles')
@@ -67,9 +70,8 @@ const RegisterPage = () => {
     ? role.find(r => r.name === 'TEACHER')?.id
     : "";
 
-  // MODIFICADO: Recibe el evento para prevenir recarga
   const handleRegister = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault() // <--- IMPORTANTE: Previene que la página se recargue al dar Enter
+    if (e) e.preventDefault() 
 
     if (!isPasswordValid) {
       setValidationError(true);
@@ -80,7 +82,8 @@ const RegisterPage = () => {
     setLoading(true) 
     
     try {
-      const res = await axios.post('http://localhost:8000/api/users', {
+      // CAMBIO 4: api.post y ruta corta
+      const res = await api.post('/api/users', {
         name,
         email,
         roleId,
@@ -88,8 +91,6 @@ const RegisterPage = () => {
         careerId
       })
       console.log('Usuario registrado', res.data)
-      
-      // Navegamos inmediatamente al Login
       navigate("/login")
 
     } catch (error) {
@@ -112,7 +113,6 @@ const RegisterPage = () => {
   return (
     <>
       <div className="flex items-center justify-center min-h-screen bg-gray-900 p-4">
-        {/* MODIFICADO: Cambié el div principal por form y agregué onSubmit */}
         <form onSubmit={handleRegister} className="w-full max-w-sm p-8 bg-gray-800 rounded-2xl shadow-lg space-y-6 text-gray-100">
           <h1 className="text-xl font-semibold text-center text-white">Registrarse</h1>
           <Label htmlFor="name">Nombre</Label>
@@ -170,12 +170,7 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          <Button
-            type="submit" // MODIFICADO: Agregado type="submit" para que el Enter funcione
-            className="w-full bg-cyan-600 hover:bg-cyan-500 text-white "
-            disabled={loading}
-            // Quitamos onClick={handleRegister} porque el form onSubmit ya lo maneja
-          >
+          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white " disabled={loading}>
             {loading ? "Cargando..." : "Registrarse"}
           </Button>
           <p className="text-center text-sm text-gray-400">

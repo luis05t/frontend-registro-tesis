@@ -1,6 +1,7 @@
 import Sidebar from "@/components/SideBar"
 import { useEffect, useState } from "react"
-import axios from "axios"
+// CAMBIO 1: Usar api en lugar de axios
+import api from "@/api/axios"
 import { 
   FolderGit2,  
   GraduationCap, 
@@ -60,12 +61,13 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
-        const headers = { Authorization: `Bearer ${accessToken}` }
+        // CAMBIO 2: Eliminamos headers manuales (ya los maneja el interceptor de api) 
+        // y usamos rutas relativas
         const [projectsRes, usersRes, careersRes, skillsRes] = await Promise.allSettled([
-          axios.get("http://localhost:8000/api/projects", { headers }),
-          axios.get("http://localhost:8000/api/users", { headers }),
-          axios.get("http://localhost:8000/api/careers", { headers }),
-          axios.get("http://localhost:8000/api/skills", { headers })
+          api.get("/api/projects"),
+          api.get("/api/users"),
+          api.get("/api/careers"),
+          api.get("/api/skills")
         ])
 
         if (projectsRes.status === 'fulfilled') {
