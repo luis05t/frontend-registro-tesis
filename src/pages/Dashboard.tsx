@@ -1,6 +1,5 @@
 import Sidebar from "@/components/SideBar"
 import { useEffect, useState } from "react"
-// CAMBIO 1: Usar api en lugar de axios
 import api from "@/api/axios"
 import { 
   FolderGit2,  
@@ -61,34 +60,41 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
-        // CAMBIO 2: Eliminamos headers manuales (ya los maneja el interceptor de api) 
-        // y usamos rutas relativas
         const [projectsRes, usersRes, careersRes, skillsRes] = await Promise.allSettled([
-          api.get("/api/projects"),
-          api.get("/api/users"),
-          api.get("/api/careers"),
-          api.get("/api/skills")
+          api.get("/api/projects?limit=1000"),
+          api.get("/api/users?limit=1000"),
+          api.get("/api/careers?limit=1000"),
+          api.get("/api/skills?limit=1000")
         ])
 
         if (projectsRes.status === 'fulfilled') {
-          const projectsData = projectsRes.value.data.data
+          const rawData = projectsRes.value.data
+          const projectsData = Array.isArray(rawData) ? rawData : (rawData.data || [])
+          
           setStats(prev => ({ ...prev, totalProjects: projectsData.length }))
+          
           setRecentProjects(projectsData.slice(0, 4))
           setAllProjects(projectsData) 
         }
+
         if (usersRes.status === 'fulfilled') {
-          const usersData = usersRes.value.data.data
-          setStats(prev => ({ ...prev, totalUsers: usersData ? usersData.length : 0 }))
+          const rawData = usersRes.value.data
+          const usersData = Array.isArray(rawData) ? rawData : (rawData.data || [])
+          setStats(prev => ({ ...prev, totalUsers: usersData.length }))
         }
+
         if (careersRes.status === 'fulfilled') {
-          const careersData = careersRes.value.data.data
-          setStats(prev => ({ ...prev, totalCareers: careersRes.value.data.meta.total }))
+          const rawData = careersRes.value.data
+          const careersData = Array.isArray(rawData) ? rawData : (rawData.data || [])
+          setStats(prev => ({ ...prev, totalCareers: careersData.length }))
           setCareersList(careersData)
         }
+        
         if (skillsRes.status === 'fulfilled') {
-           const skillsData = skillsRes.value.data.data || []
-           const total = skillsRes.value.data.meta?.total || skillsData.length || 0
-           setStats(prev => ({ ...prev, totalSkills: total }))
+           const rawData = skillsRes.value.data;
+           const skillsData = Array.isArray(rawData) ? rawData : (rawData.data || []);
+           
+           setStats(prev => ({ ...prev, totalSkills: skillsData.length }))
            setSkillsList(skillsData)
         }
 
@@ -214,7 +220,6 @@ const Dashboard = () => {
                 
                 {statCards.map((stat, index) => {
                   
-                  // CASO 1: TARJETA DE PROYECTOS (FUNCIONALIDAD MIXTA)
                   if (stat.key === 'projects') {
                     return (
                       <Dialog key={index}>
@@ -285,7 +290,6 @@ const Dashboard = () => {
                     )
                   }
 
-                  // CASO 2: OTRAS TARJETAS (Modal normal)
                   return (
                     <Card key={index} className="bg-gray-900 border-gray-800 shadow-lg hover:border-gray-700 transition-all relative">
                       <Dialog>
@@ -345,7 +349,6 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="col-span-1 lg:col-span-3 bg-gray-900 border border-gray-800 rounded-lg shadow-lg hover:border-gray-700 transition-all overflow-hidden">
                   
-                  {/* AQUÍ ESTÁ EL TÍTULO NUEVO QUE FUNCIONA COMO BOTÓN */}
                   <div 
                     className="p-4 border-b border-gray-800 flex justify-between items-center cursor-pointer hover:bg-gray-800/50 transition-colors group"
                     onClick={() => navigate("/projects")}

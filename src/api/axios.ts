@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 
-const BASE_URL = "https://780q1m41-8000.use2.devtunnels.ms/"; 
+const BASE_URL = "http://localhost:8000"; 
 
 const api = axios.create({
     baseURL: BASE_URL,

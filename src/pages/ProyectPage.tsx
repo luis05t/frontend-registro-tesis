@@ -138,7 +138,6 @@ const ProyectPage = () => {
   const [userProjects, setUserProjects] = useState<Project[]>([])
   
   // --- CREDENCIALES ---
-  // ELIMINADA LA LÍNEA DE accessToken QUE CAUSABA EL ERROR
   const userId = localStorage.getItem('id')
 
   // --- ESTADOS UI ---
@@ -147,6 +146,10 @@ const ProyectPage = () => {
   
   const [success, setSuccess] = useState(false)
   const [errorAlert, setErrorAlert] = useState(false)
+  
+  // Estado para controlar el mensaje de error específico
+  const [errorMessage, setErrorMessage] = useState("Hubo un problema.")
+
   const [deleteSuccess, setDeleteSuccess] = useState(false)
   const [errorDelete, setErrorDelete] = useState(false)
 
@@ -183,7 +186,7 @@ const ProyectPage = () => {
   // Estado para confirmación de eliminación de Skill
   const [skillToDelete, setSkillToDelete] = useState<Skill | null>(null)
 
-  // NUEVO: Estado para controlar qué descripciones están visibles (Ojito)
+  // Estado para controlar qué descripciones están visibles (Ojito)
   const [visibleDescriptions, setVisibleDescriptions] = useState<Record<string, boolean>>({})
 
   // --- FORMS ---
@@ -214,8 +217,11 @@ const ProyectPage = () => {
   const fetchProjects = async () => {
     setLoadingProjects(true)
     try {
-      const res = await api.get("/api/projects")
-      setProjects(res.data.data || [])
+      // [CORRECCIÓN 1] Agregamos ?limit=1000 para traer TODOS los proyectos
+      const res = await api.get("/api/projects?limit=1000")
+      // Manejamos si viene en .data directo o en .data.data
+      const rawData = res.data
+      setProjects(Array.isArray(rawData) ? rawData : (rawData.data || []))
     } catch (error) {
       console.log(error)
       setProjects([])
@@ -236,11 +242,14 @@ const ProyectPage = () => {
 
   const fetchSkillsData = async () => {
     try {
-      const resSkills = await api.get('/api/skills')
-      setSkills(Array.isArray(resSkills.data) ? resSkills.data : resSkills.data.data || [])
+      // [CORRECCIÓN 2] Agregamos ?limit=1000 para traer TODAS las habilidades
+      const resSkills = await api.get('/api/skills?limit=1000')
+      const skillsRaw = resSkills.data
+      setSkills(Array.isArray(skillsRaw) ? skillsRaw : (skillsRaw.data || []))
       
-      const resProjectSkills = await api.get('/api/porjects-skills')
-      setProjectSkills(resProjectSkills.data.data || [])
+      const resProjectSkills = await api.get('/api/porjects-skills?limit=1000')
+      const pSkillsRaw = resProjectSkills.data
+      setProjectSkills(Array.isArray(pSkillsRaw) ? pSkillsRaw : (pSkillsRaw.data || []))
     } catch (error) {
       console.log(error)
     }
@@ -250,11 +259,14 @@ const ProyectPage = () => {
     const fetchData = async () => {
       try {
         const [careersRes, rolesRes] = await Promise.all([
-          api.get('/api/careers'),
-          api.get('/api/roles')
+          api.get('/api/careers?limit=1000'), // También aplicamos límite alto aquí
+          api.get('/api/roles?limit=1000')
         ])
-        setCareers(careersRes.data.data || [])
-        setRole(rolesRes.data.data || [])
+        const careersData = careersRes.data
+        setCareers(Array.isArray(careersData) ? careersData : (careersData.data || []))
+        
+        const rolesData = rolesRes.data
+        setRole(Array.isArray(rolesData) ? rolesData : (rolesData.data || []))
       } catch (error) {
         console.log(error)
       }
@@ -317,10 +329,17 @@ const ProyectPage = () => {
       
       await fetchSkillsData();
       setSuccess(true);
+      
       createSkillForm.reset();
       setIsCreateSkillOpen(false);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (error) {
+    } catch (error: any) {
+      console.error(error);
+      if (error.response && error.response.status === 409) {
+        setErrorMessage("Habilidad ya agregada");
+      } else {
+        setErrorMessage("Hubo un problema al crear la habilidad.");
+      }
       setErrorAlert(true);
       setTimeout(() => setErrorAlert(false), 3000);
     } finally {
@@ -342,6 +361,7 @@ const ProyectPage = () => {
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
       console.error("Error actualizando habilidad", error)
+      setErrorMessage("Error al actualizar.");
       setErrorAlert(true)
       setTimeout(() => setErrorAlert(false), 3000)
     } finally {
@@ -382,7 +402,8 @@ const ProyectPage = () => {
       const objectivesArray = values.objectives.split("\n").filter(l => l.trim().length > 0)
       let deliverablesArray = values.deliverables ? values.deliverables.split("\n").filter(l => l.trim().length > 0) : []
       if (values.link && values.link.trim() !== "") { deliverablesArray.push(values.link.trim()); }
-      const initialStatus = values.status || "en progreso";
+      
+      const initialStatus = "pendiente";
 
       const res = await api.post('/api/projects', {
         name: values.name,
@@ -419,6 +440,7 @@ const ProyectPage = () => {
       await fetchSkillsData();
     } catch (error) {
       console.error(error);
+      setErrorMessage("Hubo un problema al crear el proyecto.");
       setErrorAlert(true);
       setTimeout(() => setErrorAlert(false), 3000);
     } finally {
@@ -435,6 +457,7 @@ const ProyectPage = () => {
       setTimeout(() => setSuccess(false), 3000);
       await fetchProjects();
     } catch (error) {
+      setErrorMessage("Error al aprobar.");
       setErrorAlert(true);
       setTimeout(() => setErrorAlert(false), 3000);
     } finally {
@@ -479,6 +502,7 @@ const ProyectPage = () => {
       await fetchSkillsData();
       setIsEditOpen(false)
     } catch (error) {
+      setErrorMessage("Error al editar.");
       setErrorAlert(true);
       setTimeout(() => setErrorAlert(false), 3000);
     } finally {
@@ -542,41 +566,37 @@ const ProyectPage = () => {
   const mySkillsList = filteredSkills.filter(s => s.createdById === userId);
   const otherSkillsList = filteredSkills.filter(s => s.createdById !== userId);
 
-  // --- COMPONENTE DE TARJETA MEJORADO: DISEÑO MICRO-COMPACTO EXTREMO ---
+  // --- COMPONENTE DE TARJETA ---
   const SkillCardItem = ({ skill, canEdit }: { skill: Skill, canEdit: boolean }) => {
     const isVisible = visibleDescriptions[skill.id];
     const isOwner = skill.createdById === userId;
 
-    // CASO 1: HABILIDAD DE OTRA PERSONA (SUPER COMPACTO)
-if (!isOwner) {
-   return (
-     <Card className="bg-gray-900 border border-gray-800 p-1 flex items-center justify-center shadow-sm hover:border-cyan-500/30 transition-colors h-full">
-        <div className="flex items-center gap-1 overflow-hidden w-full">
-           <div className="p-0.5 rounded-md bg-gray-800/50 text-cyan-500/70 shrink-0">
-             <Code2 className="w-3 h-3" />
-           </div>
-           <span className="text-xs font-bold text-gray-300 truncate text-left w-full" title={skill.name}>
-             {skill.name}
-           </span>
-        </div>
-     </Card>
-   )
-}
+    if (!isOwner && !canEdit) {
+       return (
+         <Card className="bg-gray-900 border border-gray-800 p-1 flex items-center justify-center shadow-sm hover:border-cyan-500/30 transition-colors h-full">
+            <div className="flex items-center gap-1 overflow-hidden w-full">
+               <div className="p-0.5 rounded-md bg-gray-800/50 text-cyan-500/70 shrink-0">
+                 <Code2 className="w-3 h-3" />
+               </div>
+               <span className="text-xs font-bold text-gray-300 whitespace-normal leading-tight text-left w-full" title={skill.name}>
+                 {skill.name}
+               </span>
+            </div>
+         </Card>
+       )
+    }
 
-    // CASO 2: MI HABILIDAD (ULTRA COMPACTO)
     return (
       <Card className="group relative bg-gray-900 border border-gray-800 hover:border-cyan-500/50 transition-all duration-300 overflow-hidden flex flex-col shadow-sm hover:shadow-cyan-900/20 p-0">
         
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/0 via-cyan-900/0 to-cyan-900/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
-        {/* HEADER: CENTRADO Y MÁS GRANDE */}
         <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-800 bg-gray-950/30 gap-2">
           <div className="p-0.5 rounded-md bg-gray-800 text-cyan-400 group-hover:text-cyan-300 transition-colors shrink-0">
             <Code2 className="w-4 h-4" />
           </div>
           
-          {/* TEXTO MÁS GRANDE, CENTRADO Y NEGRITA */}
-          <h4 className="font-extrabold text-base text-gray-100 truncate flex-1 text-center" title={skill.name}>
+          <h4 className="font-extrabold text-base text-gray-100 whitespace-normal leading-tight flex-1 text-center" title={skill.name}>
             {skill.name}
           </h4>
           
@@ -591,23 +611,20 @@ if (!isOwner) {
           </Button>
         </div>
 
-        {/* CUERPO: PEGADO A BORDES */}
-<div className="relative" style={{ minHeight: isVisible ? '3rem' : 'auto', maxHeight: isVisible ? '5.5rem' : 'auto' }}> 
-   {isVisible ? (
-     <div className="h-full overflow-y-auto px-2 custom-scrollbar">
-       <p className="text-xs text-gray-300 leading-snug">
-         {skill.description}
-       </p>
-     </div>
-   ) : (
-     <div className="flex items-center justify-center text-gray-700 py-2">
-        <Lock className="w-3 h-3 opacity-50" />
-     </div>
-   )}
-</div>
+        <div className="relative" style={{ minHeight: isVisible ? '3rem' : 'auto', maxHeight: isVisible ? '5.5rem' : 'auto' }}> 
+           {isVisible ? (
+             <div className="h-full overflow-y-auto px-2 custom-scrollbar">
+               <p className="text-xs text-gray-300 leading-snug">
+                 {skill.description}
+               </p>
+             </div>
+           ) : (
+             <div className="flex items-center justify-center text-gray-700 py-2">
+                <Lock className="w-3 h-3 opacity-50" />
+             </div>
+           )}
+        </div>
         
-
-        {/* PIE: Acciones MÁS GRANDES */}
         {canEdit && (
           <div className="flex border-t border-gray-800 divide-x divide-gray-800 bg-gray-950/20">
             <button
@@ -631,6 +648,7 @@ if (!isOwner) {
       </Card>
     )
   }
+
   const renderFormFields = (form: any) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
       <FormField control={form.control} name="name" render={({ field }) => (
@@ -658,7 +676,6 @@ if (!isOwner) {
         <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Carrera</FormLabel><FormControl><select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}><option value="">Seleccionar carrera...</option>{careers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
       
-      {/* SELECCIÓN DE HABILIDADES EN EL FORMULARIO (DISEÑO GRID) */}
       <div className="md:col-span-2 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
         <Label className="text-cyan-400 font-bold mb-3 block items-center gap-2"><Code2 className="w-4 h-4" /> Habilidades Requeridas</Label>
         <div className="relative mb-3">
@@ -666,8 +683,7 @@ if (!isOwner) {
           <Input value={skillSearch} onChange={(e) => setSkillSearch(e.target.value)} type="text" placeholder="Buscar habilidad..." className="pl-9 bg-gray-800 border-gray-600 text-white text-sm h-9" />
         </div>
         
-        {/* GRID DE SELECCIÓN DE SKILLS MEJORADO */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
           {skills.filter(s => s.name.toLowerCase().includes(skillSearch.toLowerCase())).map((skill) => {
             const isSelected = selectedSkills.includes(skill.id);
             return (
@@ -683,13 +699,13 @@ if (!isOwner) {
                 `}
               >
                 <div className={`
-                  w-4 h-4 rounded-full border flex items-center justify-center transition-colors
+                  w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0
                   ${isSelected ? 'bg-cyan-500 border-cyan-500' : 'border-gray-500 group-hover:border-cyan-400'}
                 `}>
                   {isSelected && <Check className="w-3 h-3 text-black font-bold" />}
                 </div>
                 
-                <span className={`text-xs font-medium truncate ${isSelected ? 'text-cyan-100' : 'text-gray-400 group-hover:text-gray-200'}`}>
+                <span className={`text-xs font-medium whitespace-normal leading-tight ${isSelected ? 'text-cyan-100' : 'text-gray-400 group-hover:text-gray-200'}`}>
                   {skill.name}
                 </span>
               </div>
@@ -800,7 +816,6 @@ if (!isOwner) {
               <div className="p-4 border-b border-gray-700 bg-gray-900/30 flex justify-between items-center">
                 <h2 className="text-lg font-bold text-white">Directorio Completo de Proyectos</h2>
                 
-                {/* 1. Botón GESTIONAR HABILIDADES */}
                 <Dialog open={isSkillsManagerOpen} onOpenChange={setIsSkillsManagerOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white font-semibold gap-2 shadow-lg">
@@ -808,17 +823,14 @@ if (!isOwner) {
                     </Button>
                   </DialogTrigger>
                   
-                  {/* MODAL GESTIÓN (TAMAÑO REDUCIDO A max-w-sm) */}
                   <DialogContent className="w-[95vw] max-w-sm bg-gray-900 border-gray-700 text-white flex flex-col max-h-[80vh]">
                     
-                    {/* ENCABEZADO CON MARGEN DERECHO PARA LA X (pr-10) */}
                     <DialogHeader className="flex flex-col gap-2 pr-3.5">
                         <div className="flex items-center justify-between">
                           <DialogTitle className="text-lg font-bold text-cyan-400 flex items-center gap-2">
                             <Zap className="w-4 h-4" /> Habilidades
                           </DialogTitle>
                           
-                          {/* Botón Crear */}
                           <Dialog open={isCreateSkillOpen} onOpenChange={setIsCreateSkillOpen}>
                             <DialogTrigger asChild>
                               <Button size="sm" variant="outline" className="border-cyan-600 text-cyan-400 hover:bg-cyan-900/20 gap-2 h-7 text-xs">
@@ -845,7 +857,6 @@ if (!isOwner) {
                           </Dialog>
                         </div>
                         
-                        {/* CONTROLES DE PESTAÑAS */}
                         <div className="flex p-1 bg-gray-800 rounded-lg border border-gray-700 mt-1">
                           <button 
                             onClick={() => setActiveTab("mine")}
@@ -861,7 +872,6 @@ if (!isOwner) {
                           </button>
                         </div>
 
-                        {/* BUSCADOR INTERNO */}
                         <div className="relative mt-2">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                           <Input 
@@ -874,10 +884,8 @@ if (!isOwner) {
                         </div>
                     </DialogHeader>
                     
-                    {/* CUERPO DEL MODAL */}
                     <div className="flex-1 overflow-y-auto pr-1 mt-2">
                       
-                      {/* --- PESTAÑA 1: MIS HABILIDADES --- */}
 {activeTab === "mine" && (
   <div className="space-y-2">
     {mySkillsList.length === 0 ? (
@@ -894,7 +902,6 @@ if (!isOwner) {
   </div>
 )}
 
-                      {/* --- PESTAÑA 2: COMUNIDAD --- */}
 {activeTab === "community" && (
   <div className="space-y-2">
     {otherSkillsList.length === 0 ? (
@@ -955,7 +962,15 @@ if (!isOwner) {
                         const { link, textItems } = parseDeliverables(p.deliverables || []);
 
                         return (
-                          <TableRow key={p.id} className={`border-gray-700 transition-colors group align-top cursor-pointer ${p.status === 'pendiente' ? 'bg-yellow-900/10 hover:bg-yellow-900/20' : 'hover:bg-gray-700/30'}`} onClick={() => { setViewProject(p); setIsViewOpen(true); }}>
+                          <TableRow 
+                            key={p.id} 
+                            className={`border-gray-700 transition-colors group align-top cursor-pointer 
+                              ${p.status === 'pendiente' 
+                                ? 'bg-red-950/20 hover:bg-red-900/30' // Rojo para pendientes
+                                : 'hover:bg-gray-700/30' // Gris normal para el resto
+                              }`} 
+                            onClick={() => { setViewProject(p); setIsViewOpen(true); }}
+                          >
                             <TableCell className="py-4 align-top">
                               <div className="space-y-2">
                                 <p className="text-white font-bold text-lg leading-tight truncate w-[375px]" title={p.name}>{p.name}</p>
@@ -980,7 +995,6 @@ if (!isOwner) {
                                   </div>
                                 )}
                                 
-                                {/* USO DE BADGE PARA SKILLS EN TABLA */}
                                 {mySkills.length > 0 && (
                                   <div className="flex flex-wrap gap-1.5 mt-3">
                                     {mySkills.map(sk => (
@@ -1024,7 +1038,7 @@ if (!isOwner) {
                             <TableCell className="py-4 align-top">
                               <div className="space-y-3">
                                 {p.status === 'pendiente' ? (
-                                  <Badge variant="outline" className="text-yellow-400 border-yellow-700 bg-yellow-900/30 flex w-fit items-center gap-1"><Clock className="w-3 h-3" /> Stand-by</Badge>
+                                  <Badge variant="outline" className="text-red-400 border-red-900 bg-red-900/20 flex w-fit items-center gap-1"><Clock className="w-3 h-3" /> Pendiente</Badge>
                                 ) : (
                                   <Badge variant="outline" className={`${p.status === 'Finalizado' || p.status === 'completado' ? 'text-green-400 border-green-900 bg-green-900/20' : 'text-cyan-400 border-cyan-900 bg-cyan-900/20'}`}>{capitalizeFirst(p.status) || "N/A"}</Badge>
                                 )}
@@ -1059,16 +1073,32 @@ if (!isOwner) {
               </div>
             </div>
 
-            {/* ALERTA Y MODALES AUXILIARES */}
-            {success && <Alert className="fixed top-5 right-5 w-auto bg-green-600 border-green-500 text-white shadow-xl animate-in slide-in-from-right"><CheckCircle2Icon /><AlertTitle>Éxito</AlertTitle><AlertDescription>Operación realizada correctamente.</AlertDescription></Alert>}
-            {errorAlert && <Alert className="fixed top-5 right-5 w-auto bg-red-600 border-red-500 text-white shadow-xl animate-in slide-in-from-right"><AlertCircleIcon /><AlertTitle>Error</AlertTitle><AlertDescription>Hubo un problema.</AlertDescription></Alert>}
+            {success && (
+              <Alert className="fixed top-5 right-5 w-auto bg-green-600 border-green-500 text-white shadow-xl animate-in slide-in-from-right z-[100]">
+                <CheckCircle2Icon />
+                <AlertTitle>Éxito</AlertTitle>
+                <AlertDescription>
+                  Habilidad creada correctamente.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {errorAlert && (
+              <Alert className="fixed top-5 right-5 w-auto bg-red-600 border-red-500 text-white shadow-xl animate-in slide-in-from-right z-[100]">
+                <AlertCircleIcon />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  {errorMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {deleteSuccess && <Alert className="fixed top-5 right-5 w-auto bg-green-600 border-green-500 text-white shadow-xl animate-in slide-in-from-right"><CheckCircle2Icon /><AlertTitle>Eliminado</AlertTitle><AlertDescription>El registro ha sido eliminado.</AlertDescription></Alert>}
             {errorDelete && <Alert className="fixed top-5 right-5 w-auto bg-red-600 border-red-500 text-white shadow-xl animate-in slide-in-from-right"><AlertCircleIcon /><AlertTitle>Error</AlertTitle><AlertDescription>No se pudo eliminar.</AlertDescription></Alert>}
           </div>
         )}
       </main>
 
-      {/* MODAL EDITAR PROYECTO */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700 text-white">
           <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Editar Proyecto</DialogTitle></DialogHeader>
@@ -1084,8 +1114,6 @@ if (!isOwner) {
         </DialogContent>
       </Dialog>
       
-      {/* MODAL EDITAR HABILIDAD (DENTRO DEL MANAGER) */}
-      {/* MODAL EDITAR HABILIDAD (DENTRO DEL MANAGER) */}
 <Dialog open={!!editingSkill} onOpenChange={(open) => !open && setEditingSkill(null)}>
   <DialogContent className="bg-gray-800 border-gray-700 text-white z-[70]">
     <DialogHeader><DialogTitle>Editar Habilidad</DialogTitle></DialogHeader>
@@ -1106,7 +1134,6 @@ if (!isOwner) {
         </DialogContent>
       </Dialog>
       
-      {/* 3. CONFIRMACIÓN DE ELIMINAR HABILIDAD (MODAL TIPO PLATAFORMA) */}
       <Dialog open={!!skillToDelete} onOpenChange={(open) => !open && setSkillToDelete(null)}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white z-[80] max-w-sm">
           <DialogHeader>
@@ -1128,7 +1155,6 @@ if (!isOwner) {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL DETALLE DE PROYECTO (VER) */}
       <Dialog open={isViewOpen} onOpenChange={(open) => { setIsViewOpen(open); if (!open) { navigate('/projects'); } }}>
         <DialogContent className="min-w-2xl w-full max-w-4xl bg-slate-900 border-slate-700 text-slate-100 p-0">
           <div className="max-h-[80vh] overflow-y-auto p-6 space-y-6 break-words break-all">
