@@ -24,7 +24,6 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (!isLogged || !accesToken || !userId) return
-    // Nota: Mantengo tu lógica original con axios directo aquí
     axios.get(`http://localhost:8000/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${accesToken}` },
       })
@@ -70,23 +69,27 @@ const Sidebar = () => {
           <h1 className="text-white font-bold text-xl">RepoDigital ITS</h1>
         </div>
 
+        {/* SECCIÓN DE USUARIO MODIFICADA */}
         {isLogged && user && (
-          <div className="border-b border-gray-800 py-5">
+          <div className="border-b border-gray-800 py-5 flex flex-col items-center">
+             {/* 1. SOLO LA FOTO ES EL LINK/BOTÓN */}
              <Link 
                to="/profile" 
-               className="flex flex-col items-center group cursor-pointer hover:bg-gray-800/50 transition-colors py-2"
+               className="group cursor-pointer mb-3 relative"
                title="Ir a mi perfil"
              >
-                <div className="w-20 h-20 rounded-full overflow-hidden mb-3 border-2 border-gray-700 bg-gray-800 transition-transform duration-300 group-hover:scale-105 group-hover:border-cyan-500/50">
+                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-700 bg-gray-800 transition-transform duration-300 group-hover:scale-105 group-hover:border-cyan-500/50">
                   <img 
                     src={user.image ? `http://localhost:8000${user.image}` : avatar} 
                     alt="Perfil" 
                     className="w-full h-full object-cover" 
                   />
                 </div>
-                <p className="font-semibold text-center px-2 group-hover:text-cyan-400 transition-colors">{user.name}</p>
-                <p className="text-xs text-gray-400 max-w-[200px] truncate text-center">{user.email}</p>
              </Link>
+
+             {/* 2. EL NOMBRE Y CORREO SON SOLO TEXTO (Fuera del Link) */}
+             <p className="font-semibold text-center px-2 text-gray-200">{user.name}</p>
+             <p className="text-xs text-gray-400 max-w-[200px] truncate text-center">{user.email}</p>
           </div>
         )}
 

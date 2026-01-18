@@ -2,7 +2,6 @@ import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-// CAMBIO 1: Importar api
 import api from "@/api/axios"
 import { useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Check} from "lucide-react"
@@ -45,9 +44,12 @@ const RegisterPage = () => {
   useEffect(() => {
     const fetchCareers = async () => {
       try {
-        // CAMBIO 2: api.get y ruta corta
-        const res = await api.get('/api/careers')
-        setCareers(res.data.data)
+        // CORRECCIÓN AQUÍ: Agregamos ?limit=100 para traer todas las carreras
+        const res = await api.get('/api/careers?limit=100')
+        // Si tu backend devuelve los datos paginados dentro de un objeto 'data', 
+        // a veces es res.data.data, asegúrate de que esto coincida.
+        // Dado tu código anterior, parece que es res.data.data
+        setCareers(res.data.data || res.data) 
       } catch (error) {
         console.log('Error al obtener las carreras', error)
       }
@@ -56,9 +58,9 @@ const RegisterPage = () => {
 
     const fetchRole = async () => {
       try {
-        // CAMBIO 3: api.get y ruta corta
-        const res = await api.get('/api/roles')
-        setRole(res.data.data)
+        // También aumentamos el límite aquí por seguridad
+        const res = await api.get('/api/roles?limit=100')
+        setRole(res.data.data || res.data)
       } catch (error) {
         console.log('Error al obtener roles')
       }
@@ -82,7 +84,6 @@ const RegisterPage = () => {
     setLoading(true) 
     
     try {
-      // CAMBIO 4: api.post y ruta corta
       const res = await api.post('/api/users', {
         name,
         email,
@@ -134,8 +135,12 @@ const RegisterPage = () => {
             className="bg-gray-700 text-white placeholder-gray-400 border-gray-600 focus:border-cyan-400 focus:ring-cyan-400"
           />
           <Label>Carrera</Label>
-          <select className="w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:border-cyan-400 focus:ring-cyan-400" value={careerId} onChange={(e) => setCareerId(e.target.value)}>
-            <option value="">ㅤㅤ</option>
+          <select 
+            className="w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:border-cyan-400 focus:ring-cyan-400" 
+            value={careerId} 
+            onChange={(e) => setCareerId(e.target.value)}
+          >
+            <option value="">Selecciona una carrera...</option> {/* Texto placeholder mejorado */}
             {careers.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
