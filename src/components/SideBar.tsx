@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { NavLink, useNavigate, Link } from "react-router-dom" // Agregué Link
+import { NavLink, useNavigate, Link } from "react-router-dom" 
 import axios from "axios"
 import { useAuthStore } from "@/store/authStore"
 import { Home, User, Settings, LogOut, Menu } from "lucide-react"
@@ -24,6 +24,7 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (!isLogged || !accesToken || !userId) return
+    // Nota: Mantengo tu lógica original con axios directo aquí
     axios.get(`http://localhost:8000/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${accesToken}` },
       })
@@ -64,21 +65,18 @@ const Sidebar = () => {
         className={`fixed top-0 left-0 h-full bg-gray-900 text-gray-100 shadow-xl transition-all duration-300 z-40 
         ${open ? "translate-x-0" : "-translate-x-full"} w-64`}
       >
-        {/* LOGO Y TÍTULO */}
         <div className="flex items-center justify-center py-6 border-b border-gray-800 gap-3">
           <img src="https://cdn-icons-png.flaticon.com/512/4196/4196599.png" alt="icon" className="w-7 h-7 "/>
           <h1 className="text-white font-bold text-xl">RepoDigital ITS</h1>
         </div>
 
-        {/* SECCIÓN DE USUARIO (FOTO Y DATOS) - AHORA COMO BOTÓN */}
         {isLogged && user && (
           <div className="border-b border-gray-800 py-5">
              <Link 
-               to="/profile" // Redirige al perfil
+               to="/profile" 
                className="flex flex-col items-center group cursor-pointer hover:bg-gray-800/50 transition-colors py-2"
                title="Ir a mi perfil"
              >
-                {/* Contenedor de la imagen con efecto hover */}
                 <div className="w-20 h-20 rounded-full overflow-hidden mb-3 border-2 border-gray-700 bg-gray-800 transition-transform duration-300 group-hover:scale-105 group-hover:border-cyan-500/50">
                   <img 
                     src={user.image ? `http://localhost:8000${user.image}` : avatar} 
@@ -92,7 +90,6 @@ const Sidebar = () => {
           </div>
         )}
 
-        {/* NAVEGACIÓN */}
         <nav className="flex flex-col gap-1 p-3 mt-4">
           <NavItem to="/dashboard" icon={<Home />} label="Panel de Control" />
           <NavItem to="/profile" icon={<User />} label="Perfil" />

@@ -1,7 +1,6 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 
-// Definimos la estructura de tu usuario (ajusta los campos si necesitas más)
 interface User {
   id: string
   name: string
@@ -11,7 +10,6 @@ interface User {
   careerId?: string
 }
 
-// Definimos la interfaz completa del Store
 interface AuthState {
   isLoggedIn: boolean
   token: string | null
@@ -20,11 +18,10 @@ interface AuthState {
   user: User | null
   careerId: string | null
   
-  // Acciones
   login: (token: string, userId: string, userRole: string) => void
   logout: () => void
   setUser: (user: User) => void
-  updateUser: (userData: Partial<User>) => void // La nueva función para el Sidebar
+  updateUser: (userData: Partial<User>) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -37,7 +34,6 @@ export const useAuthStore = create<AuthState>()(
       careerId: null,
       userRole: null,
 
-      // Función Login (usada en LoginPage)
       login: (token, userId, userRole) => set({ 
         isLoggedIn: true, 
         token, 
@@ -45,7 +41,6 @@ export const useAuthStore = create<AuthState>()(
         userRole 
       }),
 
-      // Función Logout (usada en Sidebar)
       logout: () => set({ 
         isLoggedIn: false, 
         token: null, 
@@ -55,10 +50,9 @@ export const useAuthStore = create<AuthState>()(
         careerId: null 
       }),
 
-      // Función para setear el usuario completo (usada al cargar)
       setUser: (user) => set({ user }),
 
-      // Función MÁGICA para actualizar datos parciales (usada en UserProfile)
+      // Esta acción permite actualizar el Sidebar sin recargar la página
       updateUser: (userData) => set((state) => ({
         user: state.user ? { ...state.user, ...userData } : null
       })),

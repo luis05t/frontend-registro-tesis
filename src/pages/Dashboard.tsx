@@ -1,6 +1,7 @@
 import Sidebar from "@/components/SideBar"
 import { useEffect, useState } from "react"
 import api from "@/api/axios"
+import { useAuthStore } from "@/store/authStore" // Importamos el store para saber el rol
 import { 
   FolderGit2,  
   GraduationCap, 
@@ -43,6 +44,10 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const accessToken = localStorage.getItem("token")
   
+  // Obtenemos el rol del usuario desde el Store
+  const { userRole } = useAuthStore()
+  const isAdmin = userRole?.toLowerCase().includes('admin')
+
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalProjects: 0,
@@ -71,10 +76,23 @@ const Dashboard = () => {
           const rawData = projectsRes.value.data
           const projectsData = Array.isArray(rawData) ? rawData : (rawData.data || [])
           
-          setStats(prev => ({ ...prev, totalProjects: projectsData.length }))
+          // --- LÓGICA DE FILTRADO VISUAL ---
+          // El backend nos manda 13 proyectos (10 activos + 3 míos pendientes).
+          // Pero el Panel de Control debe ser "limpio" para el usuario normal.
           
-          setRecentProjects(projectsData.slice(0, 4))
-          setAllProjects(projectsData) 
+          let visibleProjects = projectsData;
+
+          if (!isAdmin) {
+             // Si NO soy admin, el Dashboard solo me cuenta/muestra los activos (10).
+             // Mis pendientes NO cuentan para la estadística global ni salen en 'recientes' aquí.
+             visibleProjects = projectsData.filter((p: any) => p.status !== 'pendiente')
+          }
+          // Si SOY admin, visibleProjects se queda con todo (13), porque necesito ver qué validar.
+
+          setStats(prev => ({ ...prev, totalProjects: visibleProjects.length }))
+          
+          setRecentProjects(visibleProjects.slice(0, 4))
+          setAllProjects(visibleProjects) 
         }
 
         if (usersRes.status === 'fulfilled') {
@@ -108,7 +126,7 @@ const Dashboard = () => {
     if (accessToken) {
       fetchDashboardData()
     }
-  }, [accessToken])
+  }, [accessToken, isAdmin]) // Agregamos isAdmin a las dependencias
 
   const statCards = [
     { 
@@ -118,7 +136,7 @@ const Dashboard = () => {
       icon: FolderGit2, 
       color: "text-cyan-500", 
       bg: "bg-cyan-500/10",
-      desc: "Proyectos ya registrados"
+      desc: isAdmin ? "Total (incluye pendientes)" : "Proyectos validados"
     },
     { 
       key: "careers",
@@ -146,9 +164,17 @@ const Dashboard = () => {
         <div className="grid gap-4 py-4">
           {allProjects.length > 0 ? (
              allProjects.map(project => (
-              <div key={project.id} className="flex items-center p-3 bg-gray-800 rounded-md border border-gray-700">
-                <FolderGit2 className="w-5 h-5 text-cyan-500 mr-3" />
-                <span className="text-sm font-medium text-gray-200">{project.name}</span>
+              <div key={project.id} className="flex justify-between items-center p-3 bg-gray-800 rounded-md border border-gray-700">
+                <div className="flex items-center">
+                  <FolderGit2 className="w-5 h-5 text-cyan-500 mr-3" />
+                  <span className="text-sm font-medium text-gray-200">{project.name}</span>
+                </div>
+                {/* Solo el Admin verá esto aquí, porque al usuario se lo filtramos */}
+                {project.status === 'pendiente' && (
+                   <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-800 bg-yellow-900/20">
+                     Pendiente
+                   </Badge>
+                )}
               </div>
              ))
           ) : (
@@ -392,9 +418,16 @@ const Dashboard = () => {
                                   </div>
                                 </div>
 
-                                <Badge variant="outline" className={`shrink-0 text-xs ${proj.status === 'Finalizado' ? 'text-green-400 border-green-800' : 'text-cyan-400 border-cyan-800'}`}>
-                                  {proj.status || 'Activo'}
-                                </Badge>
+                                {proj.status === 'pendiente' ? (
+                                  <Badge variant="outline" className="shrink-0 text-xs text-yellow-500 border-yellow-800 bg-yellow-900/10">
+                                    Pendiente
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className={`shrink-0 text-xs ${proj.status === 'Finalizado' ? 'text-green-400 border-green-800' : 'text-cyan-400 border-cyan-800'}`}>
+                                    {proj.status || 'Activo'}
+                                  </Badge>
+                                )}
+
                               </div>
                             </DialogTrigger>
 
@@ -420,9 +453,15 @@ const Dashboard = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="p-3 bg-gray-800 rounded-lg">
                                     <span className="text-xs text-gray-500 block mb-1">Estado</span>
-                                    <Badge className={proj.status === 'Finalizado' ? 'bg-green-500/20 text-green-400' : 'bg-cyan-500/20 text-cyan-400'}>
-                                      {proj.status || 'En Progreso'}
-                                    </Badge>
+                                    {proj.status === 'pendiente' ? (
+                                      <Badge className="bg-yellow-500/20 text-yellow-400">
+                                        Pendiente
+                                      </Badge>
+                                    ) : (
+                                      <Badge className={proj.status === 'Finalizado' ? 'bg-green-500/20 text-green-400' : 'bg-cyan-500/20 text-cyan-400'}>
+                                        {proj.status || 'En Progreso'}
+                                      </Badge>
+                                    )}
                                   </div>
                                   <div className="p-3 bg-gray-800 rounded-lg">
                                     <span className="text-xs text-gray-500 block mb-1">Fecha de Inicio</span>
