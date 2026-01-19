@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { NavLink, useNavigate, Link } from "react-router-dom" 
-import axios from "axios"
+import api from "@/api/axios" // <--- CAMBIO CLAVE: Usamos la instancia 'api' configurada
 import { useAuthStore } from "@/store/authStore"
 import { Home, User, Settings, LogOut, Menu } from "lucide-react"
 import avatar from "../assets/avatar.png"
@@ -10,26 +10,34 @@ import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
 
 const Sidebar = () => {
-
   const userId = useAuthStore((s) => s.userId)
   const user = useAuthStore((s) => s.user)
   const setUser = useAuthStore((s) => s.setUser)
-  const navigate = useNavigate()
   const isLogged = useAuthStore((s) => s.isLoggedIn)
   const logoutStore = useAuthStore((s) => s.logout)
-  const accesToken = localStorage.getItem("token")
+  
+  const navigate = useNavigate()
   const [success, setSuccess] = useState(false)
   const [errorAlert, setErrorAlert] = useState(false)
   const [open, setOpen] = useState(true)
 
+  // URL base para las imágenes (usamos la variable de entorno)
+  const apiUrl = import.meta.env.VITE_API_URL; 
+
   useEffect(() => {
-    if (!isLogged || !accesToken || !userId) return
-    axios.get(`http://localhost:8000/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${accesToken}` },
+    // Solo intentamos cargar si estamos logueados y tenemos ID, pero NO tenemos usuario cargado aún
+    if (!isLogged || !userId) return
+
+    // Usamos 'api' en lugar de 'axios' directo. Esto incluye el token automáticamente.
+    api.get(`/api/users/${userId}`)
+      .then((res) => {
+        console.log("Sidebar: Usuario cargado correctamente", res.data);
+        setUser(res.data)
       })
-      .then((res) => setUser(res.data))
-      .catch((err) => console.log(err))
-  }, [isLogged, userId, accesToken, setUser])
+      .catch((err) => {
+        console.error("Sidebar: Error cargando usuario", err);
+      })
+  }, [isLogged, userId, setUser]) // Quitamos dependencias innecesarias
 
   const handleLogout = () => {
     try {
@@ -45,6 +53,11 @@ const Sidebar = () => {
       setErrorAlert(true)
     }
   }
+
+  
+  const profileImage = user?.image 
+    ? (user.image.startsWith('http') ? user.image : `${apiUrl}${user.image}`)
+    : avatar;
 
   return (
     <>
@@ -69,10 +82,9 @@ const Sidebar = () => {
           <h1 className="text-white font-bold text-xl">RepoDigital ITS</h1>
         </div>
 
-        {/* SECCIÓN DE USUARIO MODIFICADA */}
-        {isLogged && user && (
-          <div className="border-b border-gray-800 py-5 flex flex-col items-center">
-             {/* 1. SOLO LA FOTO ES EL LINK/BOTÓN */}
+       
+        {isLogged && (
+          <div className="border-b border-gray-800 py-5 flex flex-col items-center animate-in fade-in duration-500">
              <Link 
                to="/profile" 
                className="group cursor-pointer mb-3 relative"
@@ -80,16 +92,20 @@ const Sidebar = () => {
              >
                 <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-700 bg-gray-800 transition-transform duration-300 group-hover:scale-105 group-hover:border-cyan-500/50">
                   <img 
-                    src={user.image ? `http://localhost:8000${user.image}` : avatar} 
+                    src={profileImage} 
                     alt="Perfil" 
                     className="w-full h-full object-cover" 
+                    onError={(e) => { e.currentTarget.src = avatar }}
                   />
                 </div>
              </Link>
 
-             {/* 2. EL NOMBRE Y CORREO SON SOLO TEXTO (Fuera del Link) */}
-             <p className="font-semibold text-center px-2 text-gray-200">{user.name}</p>
-             <p className="text-xs text-gray-400 max-w-[200px] truncate text-center">{user.email}</p>
+             <p className="font-semibold text-center px-2 text-gray-200 min-h-[1.5rem]">
+               {user?.name || "Cargando..."}
+             </p>
+             <p className="text-xs text-gray-400 max-w-[200px] truncate text-center mt-1 min-h-[1rem]">
+               {user?.email || ""}
+             </p>
           </div>
         )}
 
@@ -108,15 +124,13 @@ const Sidebar = () => {
                     </button>
                   </DialogTrigger>
 
-                  <DialogContent className="sm:max-w-md bg-gray-800">
+                  <DialogContent className="sm:max-w-md bg-gray-800 border-gray-700">
                     <DialogHeader>
                       <DialogTitle className="text-m text-white">Cerrar Sesión</DialogTitle>
                     </DialogHeader>
-
                     <DialogDescription className="text-gray-300">
                       ¿Está seguro que desea cerrar sesión?
                     </DialogDescription>
-
                     <DialogFooter>
                       <DialogClose asChild>
                         <Button className="bg-gray-700 hover:bg-gray-900 text-white" variant="ghost">
@@ -147,7 +161,7 @@ const Sidebar = () => {
                 <AlertCircleIcon />
                 <AlertTitle>Error al cerrar sesión</AlertTitle>
                 <AlertDescription>
-                  Ha ocurrido un error intentar cerrar sesión, <br />intente nuevamente
+                  Ha ocurrido un error intentar cerrar sesión.
                 </AlertDescription>
               </Alert>
             )}
