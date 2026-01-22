@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { NavLink, useNavigate, Link } from "react-router-dom" 
-import api from "@/api/axios" // <--- CAMBIO CLAVE: Usamos la instancia 'api' configurada
+import api from "@/api/axios" 
 import { useAuthStore } from "@/store/authStore"
 import { Home, User, Settings, LogOut, Menu } from "lucide-react"
 import avatar from "../assets/avatar.png"
@@ -21,14 +21,16 @@ const Sidebar = () => {
   const [errorAlert, setErrorAlert] = useState(false)
   const [open, setOpen] = useState(true)
 
-  const apiUrl = import.meta.env.VITE_API_URL; 
+  // --- CAMBIO SENCILLO: Usamos la URL base de Axios directamente ---
+  // Esto asegura que si cambias el túnel en axios.ts, se cambia aquí también.
+  const baseUrl = api.defaults.baseURL?.replace(/\/$/, '') || '';
 
   useEffect(() => {
     if (!isLogged || !userId) return
 
     api.get(`/api/users/${userId}`)
       .then((res) => {
-        console.log("Sidebar: Usuario cargado correctamente", res.data);
+        // Al cargar, actualizamos el store global para que todos tengan los datos frescos
         setUser(res.data)
       })
       .catch((err) => {
@@ -51,9 +53,9 @@ const Sidebar = () => {
     }
   }
 
-  
+  // Lógica de imagen simplificada y consistente con el Perfil
   const profileImage = user?.image 
-    ? (user.image.startsWith('http') ? user.image : `${apiUrl}${user.image}`)
+    ? (user.image.startsWith('http') ? user.image : `${baseUrl}${user.image}`)
     : avatar;
 
   return (
