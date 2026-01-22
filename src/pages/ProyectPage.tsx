@@ -144,10 +144,11 @@ const ProyectPage = () => {
   const [loadingProjects, setLoadingProjects] = useState(false)
   const [loading, setLoading] = useState(false)
   
+  // NUEVO: Estado para el mensaje de éxito dinámico
   const [success, setSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("Operación exitosa") 
+
   const [errorAlert, setErrorAlert] = useState(false)
-  
-  // Estado para controlar el mensaje de error específico
   const [errorMessage, setErrorMessage] = useState("Hubo un problema.")
 
   const [deleteSuccess, setDeleteSuccess] = useState(false)
@@ -175,18 +176,14 @@ const ProyectPage = () => {
   const [isCreateSkillOpen, setIsCreateSkillOpen] = useState(false)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   
-  // Estados para Pestañas (Tabs)
   const [activeTab, setActiveTab] = useState<"mine" | "community">("mine")
 
-  // Estados para Editar/Eliminar Skill
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null)
   const [editSkillName, setEditSkillName] = useState('')
   const [editSkillDesc, setEditSkillDesc] = useState('')
   
-  // Estado para confirmación de eliminación de Skill
   const [skillToDelete, setSkillToDelete] = useState<Skill | null>(null)
 
-  // Estado para controlar qué descripciones están visibles (Ojito)
   const [visibleDescriptions, setVisibleDescriptions] = useState<Record<string, boolean>>({})
 
   // --- FORMS ---
@@ -217,14 +214,11 @@ const ProyectPage = () => {
   const fetchProjects = async () => {
     setLoadingProjects(true)
     try {
-      // [CORRECCIÓN 1] Agregamos ?limit=1000 para traer TODOS los proyectos
       const res = await api.get("/api/projects?limit=1000")
-      // Manejamos si viene en .data directo o en .data.data
       const rawData = res.data
       setProjects(Array.isArray(rawData) ? rawData : (rawData.data || []))
     } catch (error) {
       console.log(error)
-      setProjects([])
     }
     setLoadingProjects(false)
   }
@@ -236,13 +230,12 @@ const ProyectPage = () => {
       const projectsOnly = response.data.map((item: any) => item.project);
       setUserProjects(projectsOnly || []);
     } catch (error) {
-      setUserProjects([]);
+       // Silencio en error de red
     }
   }
 
   const fetchSkillsData = async () => {
     try {
-      // [CORRECCIÓN 2] Agregamos ?limit=1000 para traer TODAS las habilidades
       const resSkills = await api.get('/api/skills?limit=1000')
       const skillsRaw = resSkills.data
       setSkills(Array.isArray(skillsRaw) ? skillsRaw : (skillsRaw.data || []))
@@ -259,7 +252,7 @@ const ProyectPage = () => {
     const fetchData = async () => {
       try {
         const [careersRes, rolesRes] = await Promise.all([
-          api.get('/api/careers?limit=1000'), // También aplicamos límite alto aquí
+          api.get('/api/careers?limit=1000'), 
           api.get('/api/roles?limit=1000')
         ])
         const careersData = careersRes.data
@@ -328,6 +321,8 @@ const ProyectPage = () => {
       })
       
       await fetchSkillsData();
+      
+      setSuccessMessage("Habilidad creada correctamente.");
       setSuccess(true);
       
       createSkillForm.reset();
@@ -357,6 +352,7 @@ const ProyectPage = () => {
       })
       await fetchSkillsData()
       setEditingSkill(null)
+      setSuccessMessage("Habilidad actualizada correctamente.");
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
@@ -387,7 +383,6 @@ const ProyectPage = () => {
     }
   }
 
-  // --- FUNCIÓN TOGGLE OJITO ---
   const toggleVisibility = (skillId: string) => {
     setVisibleDescriptions(prev => ({
       ...prev,
@@ -395,7 +390,7 @@ const ProyectPage = () => {
     }))
   }
 
-  // --- HANDLERS PROYECTOS ---
+  // --- HANDLER PRINCIPAL ---
   const handleCreateProyect = async (values: z.infer<typeof projectSchema>) => {
     try {
       setLoading(true)
@@ -405,6 +400,7 @@ const ProyectPage = () => {
       
       const initialStatus = "pendiente";
 
+      // 1. Crear el proyecto (Backend optimizado)
       const res = await api.post('/api/projects', {
         name: values.name,
         description: values.description,
@@ -421,23 +417,27 @@ const ProyectPage = () => {
       });
 
       const projectId = res.data.id;
-      if (projectId) {
-        await api.post('/api/users-projects', { userId, projectId });
-        if (selectedSkills.length > 0) {
-          await Promise.all(selectedSkills.map(skillId =>
-            api.post('/api/porjects-skills', { projectId, skillId })
-          ));
-        }
-      }
       
+      // 2. CERRAR MODAL Y MOSTRAR ÉXITO INMEDIATAMENTE
+      setIsCreateOpen(false); 
+      setSuccessMessage("Proyecto creado correctamente."); // <--- MENSAJE PERSONALIZADO
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
+      
       createProjectForm.reset();
       setSelectedSkills([]);
-      setIsCreateOpen(false);
-      await fetchProjects();
-      await fetchUserProjects();
-      await fetchSkillsData();
+      
+      // 3. Tareas en segundo plano (Skills y Refresh)
+      if (projectId && selectedSkills.length > 0) {
+        Promise.all(selectedSkills.map(skillId =>
+          api.post('/api/porjects-skills', { projectId, skillId })
+        )).catch(e => console.log("Error menor guardando skills:", e));
+      }
+
+      fetchProjects().catch(e => console.log("Refresh lento:", e));
+      fetchUserProjects().catch(e => console.log("Refresh lento:", e));
+      fetchSkillsData().catch(e => console.log("Refresh lento:", e));
+
     } catch (error) {
       console.error(error);
       setErrorMessage("Hubo un problema al crear el proyecto.");
@@ -453,6 +453,7 @@ const ProyectPage = () => {
     setLoading(true);
     try {
       await api.patch(`/api/projects/${project.id}`, { status: "en progreso" });
+      setSuccessMessage("Proyecto aprobado correctamente.");
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       await fetchProjects();
@@ -496,6 +497,7 @@ const ProyectPage = () => {
           api.post('/api/porjects-skills', { projectId: editingProject.id, skillId })
         ));
       }
+      setSuccessMessage("Proyecto actualizado correctamente.");
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       await fetchProjects();
@@ -561,7 +563,6 @@ const ProyectPage = () => {
 
   const capitalizeFirst = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // Helper para dividir skills filtradas
   const filteredSkills = skills.filter(s => s.name.toLowerCase().includes(manageSkillSearch.toLowerCase()));
   const mySkillsList = filteredSkills.filter(s => s.createdById === userId);
   const otherSkillsList = filteredSkills.filter(s => s.createdById !== userId);
@@ -588,18 +589,14 @@ const ProyectPage = () => {
 
     return (
       <Card className="group relative bg-gray-900 border border-gray-800 hover:border-cyan-500/50 transition-all duration-300 overflow-hidden flex flex-col shadow-sm hover:shadow-cyan-900/20 p-0">
-        
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/0 via-cyan-900/0 to-cyan-900/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
         <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-800 bg-gray-950/30 gap-2">
           <div className="p-0.5 rounded-md bg-gray-800 text-cyan-400 group-hover:text-cyan-300 transition-colors shrink-0">
             <Code2 className="w-4 h-4" />
           </div>
-          
           <h4 className="font-extrabold text-base text-gray-100 whitespace-normal leading-tight flex-1 text-center" title={skill.name}>
             {skill.name}
           </h4>
-          
           <Button
             variant="ghost"
             size="icon"
@@ -610,7 +607,6 @@ const ProyectPage = () => {
             {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </Button>
         </div>
-
         <div className="relative" style={{ minHeight: isVisible ? '3rem' : 'auto', maxHeight: isVisible ? '5.5rem' : 'auto' }}> 
            {isVisible ? (
              <div className="h-full overflow-y-auto px-2 custom-scrollbar">
@@ -1078,7 +1074,7 @@ const ProyectPage = () => {
                 <CheckCircle2Icon />
                 <AlertTitle>Éxito</AlertTitle>
                 <AlertDescription>
-                  Habilidad creada correctamente.
+                  {successMessage}
                 </AlertDescription>
               </Alert>
             )}
