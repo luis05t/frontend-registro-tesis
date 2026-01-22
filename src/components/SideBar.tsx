@@ -21,14 +21,11 @@ const Sidebar = () => {
   const [errorAlert, setErrorAlert] = useState(false)
   const [open, setOpen] = useState(true)
 
-  // URL base para las imágenes (usamos la variable de entorno)
   const apiUrl = import.meta.env.VITE_API_URL; 
 
   useEffect(() => {
-    // Solo intentamos cargar si estamos logueados y tenemos ID, pero NO tenemos usuario cargado aún
     if (!isLogged || !userId) return
 
-    // Usamos 'api' en lugar de 'axios' directo. Esto incluye el token automáticamente.
     api.get(`/api/users/${userId}`)
       .then((res) => {
         console.log("Sidebar: Usuario cargado correctamente", res.data);
@@ -37,7 +34,7 @@ const Sidebar = () => {
       .catch((err) => {
         console.error("Sidebar: Error cargando usuario", err);
       })
-  }, [isLogged, userId, setUser]) // Quitamos dependencias innecesarias
+  }, [isLogged, userId, setUser]) 
 
   const handleLogout = () => {
     try {
@@ -82,7 +79,7 @@ const Sidebar = () => {
           <h1 className="text-white font-bold text-xl">RepoDigital ITS</h1>
         </div>
 
-       
+       g
         {isLogged && (
           <div className="border-b border-gray-800 py-5 flex flex-col items-center animate-in fade-in duration-500">
              <Link 
