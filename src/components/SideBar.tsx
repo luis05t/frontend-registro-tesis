@@ -79,7 +79,6 @@ const Sidebar = () => {
           <h1 className="text-white font-bold text-xl">RepoDigital ITS</h1>
         </div>
 
-       g
         {isLogged && (
           <div className="border-b border-gray-800 py-5 flex flex-col items-center animate-in fade-in duration-500">
              <Link 

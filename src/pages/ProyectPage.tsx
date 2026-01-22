@@ -144,15 +144,12 @@ const ProyectPage = () => {
   const [loadingProjects, setLoadingProjects] = useState(false)
   const [loading, setLoading] = useState(false)
   
-  // NUEVO: Estado para el mensaje de éxito dinámico
+  // --- NOTIFICACIONES (Alertas) ---
   const [success, setSuccess] = useState(false)
-  const [successMessage, setSuccessMessage] = useState("Operación exitosa") 
+  const [successMessage, setSuccessMessage] = useState("") 
 
   const [errorAlert, setErrorAlert] = useState(false)
   const [errorMessage, setErrorMessage] = useState("Hubo un problema.")
-
-  const [deleteSuccess, setDeleteSuccess] = useState(false)
-  const [errorDelete, setErrorDelete] = useState(false)
 
   const [search, setSearch] = useState("")
   const [skillSearch, setSkillSearch] = useState("")
@@ -209,6 +206,19 @@ const ProyectPage = () => {
       careerId: "", objectives: "", status: "",
     }
   })
+
+  // --- HELPER ALERTAS ---
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg)
+    setSuccess(true)
+    setTimeout(() => setSuccess(false), 4000)
+  }
+
+  const showError = (msg: string) => {
+    setErrorMessage(msg)
+    setErrorAlert(true)
+    setTimeout(() => setErrorAlert(false), 4000)
+  }
 
   // --- FETCHING ---
   const fetchProjects = async () => {
@@ -319,26 +329,21 @@ const ProyectPage = () => {
         description: values.description,
         details: { level: "N/A", category: "N/A" } 
       })
-      
       await fetchSkillsData();
       
-      setSuccessMessage("Habilidad creada correctamente.");
-      setSuccess(true);
+      setLoading(false); 
+      setTimeout(() => showSuccess("Habilidad creada correctamente."), 300);
       
       createSkillForm.reset();
       setIsCreateSkillOpen(false);
-      setTimeout(() => setSuccess(false), 3000);
     } catch (error: any) {
+      setLoading(false);
       console.error(error);
       if (error.response && error.response.status === 409) {
-        setErrorMessage("Habilidad ya agregada");
+        showError("Habilidad ya agregada");
       } else {
-        setErrorMessage("Hubo un problema al crear la habilidad.");
+        showError("Hubo un problema al crear la habilidad.");
       }
-      setErrorAlert(true);
-      setTimeout(() => setErrorAlert(false), 3000);
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -352,16 +357,13 @@ const ProyectPage = () => {
       })
       await fetchSkillsData()
       setEditingSkill(null)
-      setSuccessMessage("Habilidad actualizada correctamente.");
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      
+      setLoading(false);
+      setTimeout(() => showSuccess("Habilidad actualizada correctamente."), 300);
     } catch (error) {
+      setLoading(false);
       console.error("Error actualizando habilidad", error)
-      setErrorMessage("Error al actualizar.");
-      setErrorAlert(true)
-      setTimeout(() => setErrorAlert(false), 3000)
-    } finally {
-      setLoading(false)
+      showError("Error al actualizar.");
     }
   }
 
@@ -371,15 +373,14 @@ const ProyectPage = () => {
     try {
       await api.delete(`/api/skills/${skillToDelete.id}`)
       await fetchSkillsData()
-      setDeleteSuccess(true)
       setSkillToDelete(null)
-      setTimeout(() => setDeleteSuccess(false), 3000)
+      
+      setLoading(false);
+      setTimeout(() => showSuccess("Habilidad eliminada correctamente."), 300);
     } catch (error) {
+      setLoading(false);
       console.error("Error borrando", error)
-      setErrorDelete(true)
-      setTimeout(() => setErrorDelete(false), 3000)
-    } finally {
-      setLoading(false)
+      showError("No se pudo eliminar.");
     }
   }
 
@@ -390,17 +391,16 @@ const ProyectPage = () => {
     }))
   }
 
-  // --- HANDLER PRINCIPAL ---
+  // --- HANDLERS PROYECTOS ---
   const handleCreateProyect = async (values: z.infer<typeof projectSchema>) => {
+    setLoading(true) 
     try {
-      setLoading(true)
       const objectivesArray = values.objectives.split("\n").filter(l => l.trim().length > 0)
       let deliverablesArray = values.deliverables ? values.deliverables.split("\n").filter(l => l.trim().length > 0) : []
       if (values.link && values.link.trim() !== "") { deliverablesArray.push(values.link.trim()); }
       
       const initialStatus = "pendiente";
 
-      // 1. Crear el proyecto (Backend optimizado)
       const res = await api.post('/api/projects', {
         name: values.name,
         description: values.description,
@@ -418,33 +418,30 @@ const ProyectPage = () => {
 
       const projectId = res.data.id;
       
-      // 2. CERRAR MODAL Y MOSTRAR ÉXITO INMEDIATAMENTE
-      setIsCreateOpen(false); 
-      setSuccessMessage("Proyecto creado correctamente."); // <--- MENSAJE PERSONALIZADO
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      
-      createProjectForm.reset();
-      setSelectedSkills([]);
-      
-      // 3. Tareas en segundo plano (Skills y Refresh)
       if (projectId && selectedSkills.length > 0) {
-        Promise.all(selectedSkills.map(skillId =>
+        await Promise.all(selectedSkills.map(skillId =>
           api.post('/api/porjects-skills', { projectId, skillId })
         )).catch(e => console.log("Error menor guardando skills:", e));
       }
 
-      fetchProjects().catch(e => console.log("Refresh lento:", e));
-      fetchUserProjects().catch(e => console.log("Refresh lento:", e));
-      fetchSkillsData().catch(e => console.log("Refresh lento:", e));
+      setIsCreateOpen(false); 
+      createProjectForm.reset();
+      setSelectedSkills([]);
+
+      fetchProjects();
+      fetchUserProjects();
+      fetchSkillsData();
+
+      setLoading(false);
+
+      setTimeout(() => {
+        showSuccess("Proyecto guardado correctamente");
+      }, 300);
 
     } catch (error) {
+      setLoading(false); 
       console.error(error);
-      setErrorMessage("Hubo un problema al crear el proyecto.");
-      setErrorAlert(true);
-      setTimeout(() => setErrorAlert(false), 3000);
-    } finally {
-      setLoading(false)
+      showError("Hubo un problema al crear el proyecto.");
     }
   };
 
@@ -453,16 +450,16 @@ const ProyectPage = () => {
     setLoading(true);
     try {
       await api.patch(`/api/projects/${project.id}`, { status: "en progreso" });
-      setSuccessMessage("Proyecto aprobado correctamente.");
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
       await fetchProjects();
-    } catch (error) {
-      setErrorMessage("Error al aprobar.");
-      setErrorAlert(true);
-      setTimeout(() => setErrorAlert(false), 3000);
-    } finally {
+      
       setLoading(false);
+      setTimeout(() => {
+         showSuccess("Proyecto aceptado");
+      }, 300);
+
+    } catch (error) {
+      setLoading(false);
+      showError("Error al aprobar.");
     }
   };
 
@@ -497,35 +494,38 @@ const ProyectPage = () => {
           api.post('/api/porjects-skills', { projectId: editingProject.id, skillId })
         ));
       }
-      setSuccessMessage("Proyecto actualizado correctamente.");
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      
       await fetchProjects();
       await fetchSkillsData();
       setIsEditOpen(false)
-    } catch (error) {
-      setErrorMessage("Error al editar.");
-      setErrorAlert(true);
-      setTimeout(() => setErrorAlert(false), 3000);
-    } finally {
+
       setLoading(false);
+      setTimeout(() => {
+        showSuccess("Cambios guardados");
+      }, 300);
+
+    } catch (error) {
+      setLoading(false);
+      showError("Error al editar.");
     }
   };
 
   const handleDeleteProyect = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
+    setLoading(true)
     try {
-      setLoading(true)
       await api.delete(`/api/projects/${id}`)
-      setDeleteSuccess(true)
-      setTimeout(() => setDeleteSuccess(false), 3000)
       await fetchProjects()
       await fetchSkillsData()
+      
+      setLoading(false);
+      setTimeout(() => {
+        showSuccess("Proyecto eliminado");
+      }, 300);
+
     } catch (error) {
-      setErrorDelete(true)
-      setTimeout(() => setErrorDelete(false), 3000)
-    } finally {
-      setLoading(false)
+      setLoading(false);
+      showError("No se pudo eliminar.");
     }
   }
 
@@ -729,7 +729,7 @@ const ProyectPage = () => {
   return (
     <div className="flex bg-gray-900 min-h-screen text-gray-100 font-sans">
       <Sidebar />
-      <main className="flex-1 ml-0 md:ml-64 p-6 transition-all w-full overflow-x-hidden">
+      <main className="flex-1 ml-0 md:ml-64 p-6 transition-all w-full overflow-x-hidden relative">
         
         {/* HEADER */}
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6">
@@ -1069,34 +1069,43 @@ const ProyectPage = () => {
               </div>
             </div>
 
+            {/* --- ALERTAS UNIFICADAS Y DE ALTA VISIBILIDAD --- */}
+            {/* Z-INDEX SUPREMO (z-[10002]) PARA QUE NADA LO TAPE */}
+            
             {success && (
-              <Alert className="fixed top-5 right-5 w-auto bg-green-600 border-green-500 text-white shadow-xl animate-in slide-in-from-right z-[100]">
-                <CheckCircle2Icon />
-                <AlertTitle>Éxito</AlertTitle>
-                <AlertDescription>
-                  {successMessage}
-                </AlertDescription>
-              </Alert>
+              <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
+                <Alert className="w-auto bg-green-600 border-green-500 text-white shadow-2xl flex items-center gap-3 pr-6">
+                  <CheckCircle2Icon className="h-6 w-6 text-white" />
+                  <div>
+                    <AlertTitle className="text-white font-bold text-lg">Éxito</AlertTitle>
+                    <AlertDescription className="text-white/90 font-medium text-base">
+                      {successMessage}
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              </div>
             )}
 
             {errorAlert && (
-              <Alert className="fixed top-5 right-5 w-auto bg-red-600 border-red-500 text-white shadow-xl animate-in slide-in-from-right z-[100]">
-                <AlertCircleIcon />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  {errorMessage}
-                </AlertDescription>
-              </Alert>
+               <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
+                <Alert className="w-auto bg-red-600 border-red-500 text-white shadow-2xl flex items-center gap-3 pr-6">
+                  <AlertCircleIcon className="h-6 w-6 text-white" />
+                  <div>
+                    <AlertTitle className="text-white font-bold text-lg">Error</AlertTitle>
+                    <AlertDescription className="text-white/90 font-medium text-base">
+                      {errorMessage}
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              </div>
             )}
 
-            {deleteSuccess && <Alert className="fixed top-5 right-5 w-auto bg-green-600 border-green-500 text-white shadow-xl animate-in slide-in-from-right"><CheckCircle2Icon /><AlertTitle>Eliminado</AlertTitle><AlertDescription>El registro ha sido eliminado.</AlertDescription></Alert>}
-            {errorDelete && <Alert className="fixed top-5 right-5 w-auto bg-red-600 border-red-500 text-white shadow-xl animate-in slide-in-from-right"><AlertCircleIcon /><AlertTitle>Error</AlertTitle><AlertDescription>No se pudo eliminar.</AlertDescription></Alert>}
           </div>
         )}
       </main>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700 text-white">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700 text-white z-[90]">
           <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Editar Proyecto</DialogTitle></DialogHeader>
           <Form {...editProjectForm}>
             <form onSubmit={editProjectForm.handleSubmit(handleEditProyect)}>
@@ -1152,8 +1161,8 @@ const ProyectPage = () => {
       </Dialog>
 
       <Dialog open={isViewOpen} onOpenChange={(open) => { setIsViewOpen(open); if (!open) { navigate('/projects'); } }}>
-        <DialogContent className="min-w-2xl w-full max-w-4xl bg-slate-900 border-slate-700 text-slate-100 p-0">
-          <div className="max-h-[80vh] overflow-y-auto p-6 space-y-6 break-words break-all">
+        <DialogContent className="w-[95vw] md:w-full md:max-w-4xl bg-slate-900 border-slate-700 text-slate-100 p-0 z-[60]">
+          <div className="max-h-[85vh] overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 break-words">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-cyan-400 flex items-center gap-2"><FileText className="w-6 h-6" /> {viewProject?.name}</DialogTitle>
               <DialogDescription className="text-slate-400">Detalles completos del proyecto</DialogDescription>
