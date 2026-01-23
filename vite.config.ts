@@ -16,7 +16,8 @@ export default defineConfig({
     allowedHosts: [
         '.app.github.dev', 
         '.github.dev', 
-        'localhost'
-    ] // Permite los dominios de los túneles de GitHub
+        'localhost',
+        '.devtunnels.ms' // <--- ESTO ES LO CRÍTICO PARA TUS TÚNELES
+    ]
   }
 })
