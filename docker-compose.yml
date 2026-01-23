@@ -1,8 +1,10 @@
 version: '3.8'
 
 services:
-  web:
-    container_name: registros_frontend
+  registros_frontend:
     build: .
+    container_name: registros_frontend
+    environment:
+      VITE_API_URL: "http://localhost:8000/api"
     ports:
-      - "80:80" # Tu frontend estará disponible en http://localhost
+      - "80:80"
