@@ -1,10 +1,9 @@
 import axios from 'axios';
 
-// Detecta automáticamente la URL del backend
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const api = axios.create({
-    baseURL: BASE_URL,
+    baseURL: `${BASE_URL}/api`, 
     withCredentials: true 
 });
 
@@ -15,5 +14,13 @@ api.interceptors.request.use((config) => {
     }
     return config;
 });
+
+
+export const getImageUrl = (imageName: string) => {
+    if (!imageName) return '/default-avatar.png'; // Imagen por defecto
+    if (imageName.startsWith('http')) return imageName;
+    
+    return `${BASE_URL}/uploads/${imageName}`;
+};
 
 export default api;
