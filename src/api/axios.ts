@@ -1,11 +1,8 @@
 import axios from 'axios';
 
-// Detecta si estamos en producción para usar la variable de entorno
-// Si no, usa localhost.
-// NOTA: Agregamos '/api' al final porque tu backend tiene un prefijo global.
-const BASE_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "http://localhost:8000/api";
+// Eliminamos el + "/api" porque el backend ya lo incluye en sus rutas
+// o lo incluiremos directamente en la variable de entorno de Vercel.
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const api = axios.create({
     baseURL: BASE_URL,
