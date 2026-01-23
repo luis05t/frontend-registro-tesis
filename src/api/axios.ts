@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-// Forzamos la URL de Render directamente para evitar errores de variables
+// Usamos la URL completa y limpia. 
+// No le agregues nada más al final para evitar el error de duplicado.
 const BASE_URL = "https://backend-registro-tesis.onrender.com/api";
 
 const api = axios.create({
