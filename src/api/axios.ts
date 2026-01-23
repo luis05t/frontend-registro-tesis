@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// ATENCIÓN: No pongas "/api" al final de esta URL. 
-// Tu backend en NestJS ya añade "/api" automáticamente a todas las rutas.
-const BASE_URL = "https://backend-registro-tesis.onrender.com";
+// La URL base debe incluir el /api UNA SOLA VEZ.
+// Tu backend en NestJS espera recibir las peticiones en /api/...
+const BASE_URL = "https://backend-registro-tesis.onrender.com/api";
 
 const api = axios.create({
     baseURL: BASE_URL,
