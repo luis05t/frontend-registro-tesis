@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  web:
+    container_name: registros_frontend
+    build: .
+    ports:
+      - "80:80" # Tu frontend estará disponible en http://localhost

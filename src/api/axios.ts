@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 1. CAMBIO PRINCIPAL: Usamos localhost en lugar del túnel
 // 2. IMPORTANTE: Agregamos '/api' al final, ya que tu Backend lo requiere
-const BASE_URL = "http://localhost:8000"; 
+const BASE_URL = "https://xll6l1ct-8000.brs.devtunnels.ms/"; 
 
 const api = axios.create({
     baseURL: BASE_URL,
