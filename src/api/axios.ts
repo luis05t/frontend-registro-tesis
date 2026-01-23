@@ -1,8 +1,11 @@
 import axios from 'axios';
 
-// 1. CAMBIO PRINCIPAL: Usamos localhost en lugar del túnel
-// 2. IMPORTANTE: Agregamos '/api' al final, ya que tu Backend lo requiere
-const BASE_URL = "https://xll6l1ct-8000.brs.devtunnels.ms/"; 
+// Detecta si estamos en producción para usar la variable de entorno
+// Si no, usa localhost.
+// NOTA: Agregamos '/api' al final porque tu backend tiene un prefijo global.
+const BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "http://localhost:8000/api";
 
 const api = axios.create({
     baseURL: BASE_URL,
