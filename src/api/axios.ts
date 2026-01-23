@@ -1,8 +1,7 @@
 import axios from 'axios';
 
+const BASE_URL = "https://xll6l1ct-8000.brs.devtunnels.ms/"; 
 // LEER del entorno. Si configuras el túnel en el .env, usará el túnel.
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"; 
-
 const api = axios.create({
     baseURL: BASE_URL,
     withCredentials: true 
