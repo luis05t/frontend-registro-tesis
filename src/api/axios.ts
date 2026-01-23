@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Eliminamos el + "/api" porque el backend ya lo incluye en sus rutas
-// o lo incluiremos directamente en la variable de entorno de Vercel.
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Forzamos la URL de Render directamente para evitar errores de variables
+const BASE_URL = "https://backend-registro-tesis.onrender.com/api";
 
 const api = axios.create({
     baseURL: BASE_URL,
