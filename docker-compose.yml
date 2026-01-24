@@ -4,7 +4,10 @@ services:
   registros_frontend:
     build: .
     container_name: registros_frontend
+    restart: always
     environment:
-      VITE_API_URL: "http://localhost:8000/api"
+      VITE_API_URL: ${VITE_API_URL}
     ports:
       - "80:80"
+    env_file:
+      - .env
