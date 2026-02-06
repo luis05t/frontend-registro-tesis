@@ -1,4 +1,3 @@
-// src/components/ui/LoadingOverlay.tsx
 import { Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 

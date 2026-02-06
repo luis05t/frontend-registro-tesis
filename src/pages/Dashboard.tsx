@@ -1,7 +1,7 @@
 import Sidebar from "@/components/SideBar"
 import { useEffect, useState } from "react"
 import api from "@/api/axios"
-import { useAuthStore } from "@/store/authStore" // Importamos el store para saber el rol
+import { useAuthStore } from "@/store/authStore" 
 import { 
   FolderGit2,  
   GraduationCap, 
@@ -76,18 +76,12 @@ const Dashboard = () => {
           const rawData = projectsRes.value.data
           const projectsData = Array.isArray(rawData) ? rawData : (rawData.data || [])
           
-          // --- LÓGICA DE FILTRADO VISUAL ---
-          // El backend nos manda 13 proyectos (10 activos + 3 míos pendientes).
-          // Pero el Panel de Control debe ser "limpio" para el usuario normal.
           
           let visibleProjects = projectsData;
 
           if (!isAdmin) {
-             // Si NO soy admin, el Dashboard solo me cuenta/muestra los activos (10).
-             // Mis pendientes NO cuentan para la estadística global ni salen en 'recientes' aquí.
              visibleProjects = projectsData.filter((p: any) => p.status !== 'pendiente')
           }
-          // Si SOY admin, visibleProjects se queda con todo (13), porque necesito ver qué validar.
 
           setStats(prev => ({ ...prev, totalProjects: visibleProjects.length }))
           
@@ -126,7 +120,7 @@ const Dashboard = () => {
     if (accessToken) {
       fetchDashboardData()
     }
-  }, [accessToken, isAdmin]) // Agregamos isAdmin a las dependencias
+  }, [accessToken, isAdmin]) 
 
   const statCards = [
     { 
@@ -169,7 +163,6 @@ const Dashboard = () => {
                   <FolderGit2 className="w-5 h-5 text-cyan-500 mr-3" />
                   <span className="text-sm font-medium text-gray-200">{project.name}</span>
                 </div>
-                {/* Solo el Admin verá esto aquí, porque al usuario se lo filtramos */}
                 {project.status === 'pendiente' && (
                    <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-800 bg-yellow-900/20">
                      Pendiente
@@ -371,7 +364,6 @@ const Dashboard = () => {
                 })}
               </div>
 
-              {/* LISTA DE ÚLTIMOS PROYECTOS */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="col-span-1 lg:col-span-3 bg-gray-900 border border-gray-800 rounded-lg shadow-lg hover:border-gray-700 transition-all overflow-hidden">
                   

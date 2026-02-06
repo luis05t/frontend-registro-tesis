@@ -67,7 +67,6 @@ import { Card } from "@/components/ui/card"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
 import { CreatePeriodModal } from "@/components/ui/CreatePeriodModal"
 
-// --- ESQUEMAS ---
 const skillSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
   description: z.string().min(1, "La descripción es obligatoria"),
@@ -88,7 +87,6 @@ const projectSchema = z.object({
   status: z.string().optional(),
 })
 
-// --- TIPOS ---
 type Project = {
   id: string
   name: string
@@ -129,7 +127,6 @@ const ProyectPage = () => {
   const { id } = useParams() 
   const navigate = useNavigate()
 
-  // --- ESTADOS DE DATOS ---
   const [projects, setProjects] = useState<Project[]>([])
   const [skills, setSkills] = useState<Skill[]>([])
   const [projectSkills, setProjectSkills] = useState<ProjectSkill[]>([])
@@ -139,14 +136,12 @@ const ProyectPage = () => {
   const [userProjects, setUserProjects] = useState<Project[]>([])
   const [periods, setPeriods] = useState<{id: string, name: string}[]>([])
   
-  // --- CREDENCIALES ---
   const userId = localStorage.getItem('id')
 
-  // --- ESTADOS UI ---
   const [loadingProjects, setLoadingProjects] = useState(false)
   const [loading, setLoading] = useState(false)
   
-  // --- NOTIFICACIONES (Alertas) ---
+
   const [success, setSuccess] = useState(false)
   const [successMessage, setSuccessMessage] = useState("") 
 
@@ -163,14 +158,13 @@ const ProyectPage = () => {
   const statusOptions = ["Todo", "en progreso", "completado"];
   const statusUserProjects = ["Todo", "Mis proyectos"]
 
-  // --- MODALES PROYECTOS ---
+ 
   const [viewProject, setViewProject] = useState<Project | null>(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   
-  // --- ESTADOS GESTIÓN DE SKILLS ---
   const [isSkillsManagerOpen, setIsSkillsManagerOpen] = useState(false)
   const [isCreateSkillOpen, setIsCreateSkillOpen] = useState(false)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
@@ -185,7 +179,7 @@ const ProyectPage = () => {
 
   const [visibleDescriptions, setVisibleDescriptions] = useState<Record<string, boolean>>({})
 
-  // --- FORMS ---
+  
   const createSkillForm = useForm<z.infer<typeof skillSchema>>({
     resolver: zodResolver(skillSchema),
     defaultValues: { name: "", description: "" }
@@ -209,7 +203,7 @@ const ProyectPage = () => {
     }
   })
 
-  // --- HELPER ALERTAS ---
+
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg)
     setSuccess(true)
@@ -222,7 +216,7 @@ const ProyectPage = () => {
     setTimeout(() => setErrorAlert(false), 4000)
   }
 
-  // --- FETCHING ---
+
   const fetchProjects = async () => {
     setLoadingProjects(true)
     try {
@@ -242,7 +236,6 @@ const ProyectPage = () => {
       const projectsOnly = response.data.map((item: any) => item.project);
       setUserProjects(projectsOnly || []);
     } catch (error) {
-       // Silencio en error de red
     }
   }
 
@@ -260,7 +253,7 @@ const ProyectPage = () => {
     }
   }
 
-  // --- NUEVA FUNCIÓN FETCH PERIODOS ---
+
   const fetchPeriods = async () => {
     try {
       const res = await api.get('/api/period');
@@ -333,20 +326,17 @@ const ProyectPage = () => {
     return { link, textItems };
   }
 
-  // --- HANDLER PARA ELIMINAR PERIODOS (MODIFICADO: Sin confirmación) ---
   const handleDeletePeriod = async (id: string) => {
-    // SE ELIMINÓ LA LÍNEA DE window.confirm PARA BORRADO AUTOMÁTICO
     try {
         await api.delete(`/api/period/${id}`);
         await fetchPeriods(); 
-        showSuccess("Periodo eliminado correctamente"); // <--- MENSAJE VERDE DE ÉXITO
+        showSuccess("Periodo eliminado correctamente"); 
     } catch (error) {
         console.error(error);
         showError("No se pudo eliminar (quizás tiene proyectos asociados).");
     }
   }
 
-  // --- HANDLERS SKILLS ---
   const handleCreateSkill = async (values: z.infer<typeof skillSchema>) => {
     setLoading(true)
     try {
@@ -698,7 +688,6 @@ const ProyectPage = () => {
                    showSuccess("Periodo creado correctamente");
                }} />}
                
-               {/* BOTÓN NUEVO: GESTIONAR PERIODOS (BORRAR) */}
                {isAdmin && (
                   <Dialog>
                     <DialogTrigger asChild>
@@ -882,7 +871,6 @@ const ProyectPage = () => {
           </div>
         </div>
 
-        {/* CONTENIDO PRINCIPAL (TABLA) */}
         {loadingProjects ? (
           <div className="flex flex-col items-center justify-center h-64">
             <Loader2 className="w-12 h-12 text-cyan-500 animate-spin mb-4" />
@@ -1044,8 +1032,8 @@ const ProyectPage = () => {
                             key={p.id} 
                             className={`border-gray-700 transition-colors group align-top cursor-pointer 
                               ${p.status === 'pendiente' 
-                                ? 'bg-red-950/20 hover:bg-red-900/30' // Rojo para pendientes
-                                : 'hover:bg-gray-700/30' // Gris normal para el resto
+                                ? 'bg-red-950/20 hover:bg-red-900/30' 
+                                : 'hover:bg-gray-700/30' 
                               }`} 
                             onClick={() => { setViewProject(p); setIsViewOpen(true); }}
                           >
@@ -1151,8 +1139,6 @@ const ProyectPage = () => {
               </div>
             </div>
 
-            {/* --- ALERTAS UNIFICADAS Y DE ALTA VISIBILIDAD --- */}
-            {/* Z-INDEX SUPREMO (z-[10002]) PARA QUE NADA LO TAPE */}
             
             {success && (
               <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">

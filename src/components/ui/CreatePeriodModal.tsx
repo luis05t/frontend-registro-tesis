@@ -37,7 +37,7 @@ export function CreatePeriodModal({ onSuccess }: Props) {
       await api.post('/api/period', data);
       reset();
       setOpen(false);
-      onSuccess(); // Recarga la lista en el Dashboard
+      onSuccess(); 
     } catch (error) {
       console.error(error);
       alert("Error al crear. Verifica que eres ADMIN.");
@@ -51,7 +51,7 @@ export function CreatePeriodModal({ onSuccess }: Props) {
       <DialogTrigger asChild>
         <Button 
           type="button" 
-          variant="outline" // Cambié estilo para que resalte más
+          variant="outline" 
           size="sm" 
           className="h-8 px-3 text-cyan-400 border-cyan-800 bg-cyan-950/30 hover:bg-cyan-900 hover:text-cyan-300 text-xs font-bold flex items-center gap-1"
         >

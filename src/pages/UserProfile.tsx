@@ -40,7 +40,6 @@
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [name, setName] = useState('') 
 
-    // --- CAMBIO SENCILLO: Variable auxiliar para la URL base (igual que en Sidebar) ---
     const baseUrl = api.defaults.baseURL?.replace(/\/$/, '') || '';
 
     const loadProfile = async () => {
@@ -51,7 +50,6 @@
         const userData = userRes.data
         
         setUser(userData)
-        // ESTO ES CLAVE: Actualiza el Sidebar automáticamente
         updateUserStore(userData)
 
         const [careersRes, rolesRes] = await Promise.all([
@@ -105,7 +103,6 @@
         await api.patch(`/api/users/${userId}/image`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
-        // Al terminar de subir, recargamos el perfil, lo que actualiza el Store y el Sidebar
         await loadProfile() 
 
       } catch (error) {
@@ -148,7 +145,6 @@
                       </div>
                     ) : (
                       <>
-                        {/* Usamos la variable baseUrl limpia */}
                         <img 
                           src={user?.image ? (user.image.startsWith('http') ? user.image : `${baseUrl}${user.image}`) : avatarPlaceholder} 
                           alt="Avatar" 

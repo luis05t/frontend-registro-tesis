@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useNavigate, Link } from "react-router-dom"
-// CAMBIO 1: Importamos nuestra instancia 'api' en lugar de 'axios'
 import api from "@/api/axios" 
 import { useAuthStore } from "@/store/authStore"
 import { Eye, EyeOff, AlertCircle } from "lucide-react"
@@ -48,7 +47,6 @@ const LoginPage = () => {
     setLoading(true)
     
     try {
-      // CAMBIO 2: Usamos 'api.post' y quitamos 'http://localhost:8000'
       const res = await api.post("/api/auth/login", { email, password })
       const { accessToken, userId, userRole } = res.data
 

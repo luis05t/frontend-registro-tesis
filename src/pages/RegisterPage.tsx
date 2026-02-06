@@ -44,11 +44,8 @@ const RegisterPage = () => {
   useEffect(() => {
     const fetchCareers = async () => {
       try {
-        // CORRECCIÓN AQUÍ: Agregamos ?limit=100 para traer todas las carreras
         const res = await api.get('/api/careers?limit=100')
-        // Si tu backend devuelve los datos paginados dentro de un objeto 'data', 
-        // a veces es res.data.data, asegúrate de que esto coincida.
-        // Dado tu código anterior, parece que es res.data.data
+
         setCareers(res.data.data || res.data) 
       } catch (error) {
         console.log('Error al obtener las carreras', error)
@@ -58,7 +55,6 @@ const RegisterPage = () => {
 
     const fetchRole = async () => {
       try {
-        // También aumentamos el límite aquí por seguridad
         const res = await api.get('/api/roles?limit=100')
         setRole(res.data.data || res.data)
       } catch (error) {
@@ -140,7 +136,7 @@ const RegisterPage = () => {
             value={careerId} 
             onChange={(e) => setCareerId(e.target.value)}
           >
-            <option value="">Selecciona una carrera...</option> {/* Texto placeholder mejorado */}
+            <option value="">Selecciona una carrera...</option> 
             {careers.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
