@@ -65,7 +65,8 @@ import {
 } from "@/components/ui/form"
 import { Card } from "@/components/ui/card"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
-
+// --- NUEVO IMPORT ---
+import { CreatePeriodModal } from "@/components/ui/CreatePeriodModal"
 // --- ESQUEMAS ---
 const skillSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
@@ -136,6 +137,8 @@ const ProyectPage = () => {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<Role[]>([])
   const [userProjects, setUserProjects] = useState<Project[]>([])
+  // --- NUEVO ESTADO PARA PERIODOS ---
+  const [periods, setPeriods] = useState<{id: string, name: string}[]>([])
   
   // --- CREDENCIALES ---
   const userId = localStorage.getItem('id')
@@ -258,6 +261,16 @@ const ProyectPage = () => {
     }
   }
 
+  // --- NUEVA FUNCIÓN FETCH PERIODOS ---
+  const fetchPeriods = async () => {
+    try {
+      const res = await api.get('/api/period');
+      setPeriods(res.data);
+    } catch (error) {
+      console.log("Error cargando periodos", error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -277,6 +290,7 @@ const ProyectPage = () => {
     fetchData()
     fetchProjects()
     fetchSkillsData()
+    fetchPeriods() // <--- LLAMADA INICIAL A PERIODOS
 
     const fetchUser = async () => {
       if (!userId) return
@@ -659,9 +673,26 @@ const ProyectPage = () => {
       <FormField control={form.control} name="cycle" render={({ field }) => (
         <FormItem><FormLabel className="text-gray-300">Ciclo</FormLabel><FormControl><select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}><option value="">Seleccionar...</option><option>Primer Ciclo</option><option>Segundo Ciclo</option><option>Tercer Ciclo</option><option>Cuarto Ciclo</option></select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
+      
+      {/* --- CAMBIO AQUÍ: SELECT DINÁMICO DE PERIODOS + MODAL --- */}
       <FormField control={form.control} name="academic_period" render={({ field }) => (
-        <FormItem><FormLabel className="text-gray-300">Periodo</FormLabel><FormControl><select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}><option value="">Seleccionar...</option><option>Sep 2025 - Feb 2026</option><option>Mar 2026 - Ago 2026</option><option>Sep 2026 - Feb 2027</option><option>Mar 2027 - Ago 2027</option></select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
+        <FormItem>
+          <div className="flex items-center justify-between">
+            <FormLabel className="text-gray-300">Periodo</FormLabel>
+            {isAdmin && <CreatePeriodModal onSuccess={fetchPeriods} />}
+          </div>
+          <FormControl>
+            <select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}>
+              <option value="">Seleccionar...</option>
+              {periods.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+          </FormControl>
+          <FormMessage className="text-red-500 text-xs" />
+        </FormItem>
       )} />
+
       <FormField control={form.control} name="startDate" render={({ field }) => (
         <FormItem><FormLabel className="text-gray-300">Fecha Inicio</FormLabel><FormControl><Input type="date" className="bg-gray-900 border-gray-600 mt-1" {...field} /></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
