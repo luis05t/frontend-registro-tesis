@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { useAuthStore } from '../store/authStore'; // <--- 1. NUEVO IMPORT
 
 export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -9,10 +8,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    // 2. MODIFICADO: Intentamos obtener el token del Store primero (donde lo guarda Zustand)
-    // Si no está ahí, intentamos buscarlo en localStorage directamente como estaba antes.
-    const token = useAuthStore.getState().token || localStorage.getItem('token');
-    
+    const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
