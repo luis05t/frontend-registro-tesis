@@ -12,7 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription, // <--- 1. IMPORTAR ESTO
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 
@@ -37,7 +37,7 @@ export function CreatePeriodModal({ onSuccess }: Props) {
       await api.post('/api/period', data);
       reset();
       setOpen(false);
-      onSuccess(); 
+      onSuccess(); // Recarga la lista en el Dashboard
     } catch (error) {
       console.error(error);
       alert("Error al crear. Verifica que eres ADMIN.");
@@ -51,17 +51,16 @@ export function CreatePeriodModal({ onSuccess }: Props) {
       <DialogTrigger asChild>
         <Button 
           type="button" 
-          variant="ghost" 
+          variant="outline" // Cambié estilo para que resalte más
           size="sm" 
-          className="h-6 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 text-xs font-bold flex items-center gap-1"
+          className="h-8 px-3 text-cyan-400 border-cyan-800 bg-cyan-950/30 hover:bg-cyan-900 hover:text-cyan-300 text-xs font-bold flex items-center gap-1"
         >
-          <Plus className="w-3 h-3" /> New
+          <Plus className="w-3 h-3" /> Nuevo Periodo
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[400px] bg-gray-800 text-white border-gray-700">
         <DialogHeader>
           <DialogTitle className="text-cyan-400">Nuevo Periodo Académico</DialogTitle>
-          {/* 2. AGREGAR ESTA DESCRIPCIÓN PARA QUITAR EL ERROR */}
           <DialogDescription className="text-gray-400 text-sm">
             Ingresa el nombre del periodo para registrarlo en el sistema.
           </DialogDescription>

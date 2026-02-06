@@ -65,8 +65,8 @@ import {
 } from "@/components/ui/form"
 import { Card } from "@/components/ui/card"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
-// --- NUEVO IMPORT ---
 import { CreatePeriodModal } from "@/components/ui/CreatePeriodModal"
+
 // --- ESQUEMAS ---
 const skillSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
@@ -137,7 +137,6 @@ const ProyectPage = () => {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<Role[]>([])
   const [userProjects, setUserProjects] = useState<Project[]>([])
-  // --- NUEVO ESTADO PARA PERIODOS ---
   const [periods, setPeriods] = useState<{id: string, name: string}[]>([])
   
   // --- CREDENCIALES ---
@@ -290,7 +289,7 @@ const ProyectPage = () => {
     fetchData()
     fetchProjects()
     fetchSkillsData()
-    fetchPeriods() // <--- LLAMADA INICIAL A PERIODOS
+    fetchPeriods() 
 
     const fetchUser = async () => {
       if (!userId) return
@@ -332,6 +331,19 @@ const ProyectPage = () => {
     const link = items.find(item => item.startsWith('http') || item.startsWith('https'));
     const textItems = items.filter(item => !item.startsWith('http') && !item.startsWith('https'));
     return { link, textItems };
+  }
+
+  // --- HANDLER PARA ELIMINAR PERIODOS (MODIFICADO: Sin confirmación) ---
+  const handleDeletePeriod = async (id: string) => {
+    // SE ELIMINÓ LA LÍNEA DE window.confirm PARA BORRADO AUTOMÁTICO
+    try {
+        await api.delete(`/api/period/${id}`);
+        await fetchPeriods(); 
+        showSuccess("Periodo eliminado correctamente"); // <--- MENSAJE VERDE DE ÉXITO
+    } catch (error) {
+        console.error(error);
+        showError("No se pudo eliminar (quizás tiene proyectos asociados).");
+    }
   }
 
   // --- HANDLERS SKILLS ---
@@ -674,12 +686,51 @@ const ProyectPage = () => {
         <FormItem><FormLabel className="text-gray-300">Ciclo</FormLabel><FormControl><select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}><option value="">Seleccionar...</option><option>Primer Ciclo</option><option>Segundo Ciclo</option><option>Tercer Ciclo</option><option>Cuarto Ciclo</option></select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
       
-      {/* --- CAMBIO AQUÍ: SELECT DINÁMICO DE PERIODOS + MODAL --- */}
+      {/* --- SECCIÓN DE PERIODOS MODIFICADA --- */}
       <FormField control={form.control} name="academic_period" render={({ field }) => (
         <FormItem>
           <div className="flex items-center justify-between">
             <FormLabel className="text-gray-300">Periodo</FormLabel>
-            {isAdmin && <CreatePeriodModal onSuccess={fetchPeriods} />}
+            <div className="flex items-center gap-2">
+               {/* MODIFICADO: Agregada alerta de éxito al crear */}
+               {isAdmin && <CreatePeriodModal onSuccess={() => {
+                   fetchPeriods();
+                   showSuccess("Periodo creado correctamente");
+               }} />}
+               
+               {/* BOTÓN NUEVO: GESTIONAR PERIODOS (BORRAR) */}
+               {isAdmin && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                       <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-red-400" title="Borrar Periodos">
+                          <Trash2 className="w-3 h-3" />
+                       </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-gray-800 border-gray-700 text-white sm:max-w-xs">
+                       <DialogHeader>
+                          <DialogTitle>Eliminar Periodos</DialogTitle>
+                          <DialogDescription className="text-gray-400">Clic en el icono para borrar automáticamente.</DialogDescription>
+                       </DialogHeader>
+                       <div className="space-y-2 mt-2 max-h-[60vh] overflow-y-auto">
+                          {periods.length === 0 ? <p className="text-sm text-gray-500">No hay periodos.</p> : periods.map(p => (
+                             <div key={p.id} className="flex justify-between items-center p-2 bg-gray-900/50 rounded border border-gray-700">
+                                <span className="text-sm truncate max-w-[150px]" title={p.name}>{p.name}</span>
+                                <Button 
+                                   type="button"
+                                   variant="ghost" 
+                                   size="sm" 
+                                   className="h-6 w-6 text-red-500 hover:bg-red-900/30 p-0"
+                                   onClick={() => handleDeletePeriod(p.id)}
+                                >
+                                   <Trash2 className="w-3 h-3" />
+                                </Button>
+                             </div>
+                          ))}
+                       </div>
+                    </DialogContent>
+                  </Dialog>
+               )}
+            </div>
           </div>
           <FormControl>
             <select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}>
