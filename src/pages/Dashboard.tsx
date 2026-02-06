@@ -1,7 +1,8 @@
 import Sidebar from "@/components/SideBar"
 import { useEffect, useState } from "react"
 import api from "@/api/axios"
-import { useAuthStore } from "@/store/authStore" // Importamos el store para saber el rol
+import { useAuthStore } from "@/store/authStore"
+import { PeriodManager } from "@/components/ui/PeriodManager" 
 import { 
   FolderGit2,  
   GraduationCap, 
@@ -76,18 +77,11 @@ const Dashboard = () => {
           const rawData = projectsRes.value.data
           const projectsData = Array.isArray(rawData) ? rawData : (rawData.data || [])
           
-          // --- LÓGICA DE FILTRADO VISUAL ---
-          // El backend nos manda 13 proyectos (10 activos + 3 míos pendientes).
-          // Pero el Panel de Control debe ser "limpio" para el usuario normal.
-          
           let visibleProjects = projectsData;
 
           if (!isAdmin) {
-             // Si NO soy admin, el Dashboard solo me cuenta/muestra los activos (10).
-             // Mis pendientes NO cuentan para la estadística global ni salen en 'recientes' aquí.
              visibleProjects = projectsData.filter((p: any) => p.status !== 'pendiente')
           }
-          // Si SOY admin, visibleProjects se queda con todo (13), porque necesito ver qué validar.
 
           setStats(prev => ({ ...prev, totalProjects: visibleProjects.length }))
           
@@ -126,7 +120,7 @@ const Dashboard = () => {
     if (accessToken) {
       fetchDashboardData()
     }
-  }, [accessToken, isAdmin]) // Agregamos isAdmin a las dependencias
+  }, [accessToken, isAdmin])
 
   const statCards = [
     { 
@@ -169,7 +163,6 @@ const Dashboard = () => {
                   <FolderGit2 className="w-5 h-5 text-cyan-500 mr-3" />
                   <span className="text-sm font-medium text-gray-200">{project.name}</span>
                 </div>
-                {/* Solo el Admin verá esto aquí, porque al usuario se lo filtramos */}
                 {project.status === 'pendiente' && (
                    <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-800 bg-yellow-900/20">
                      Pendiente
@@ -230,9 +223,19 @@ const Dashboard = () => {
               <h1 className="text-3xl font-bold text-white tracking-tight">Panel de Control</h1>
               <p className="text-gray-400 mt-1">Sistema de gestión de proyectos</p>
             </div>
-            <Button className="bg-cyan-600 hover:bg-cyan-700" onClick={() => navigate("/projects")}>
-              Ver Todos los Proyectos
-            </Button>
+            
+            {/* --- 2. AQUI AGREGAMOS EL BOTON DE PERIODOS --- */}
+            <div className="flex items-center gap-3">
+                {/* El componente PeriodManager ya sabe ocultarse si no es admin, 
+                    pero como aquí también tenemos isAdmin, es seguro. */}
+                <PeriodManager />
+
+                <Button className="bg-cyan-600 hover:bg-cyan-700" onClick={() => navigate("/projects")}>
+                  Ver Todos los Proyectos
+                </Button>
+            </div>
+            {/* ---------------------------------------------- */}
+
           </header>
 
           {loading ? (
@@ -388,7 +391,7 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="flex items-center text-xs text-gray-500 group-hover:text-cyan-400 transition-colors gap-1">
-                       Ver todo <ArrowRight className="w-4 h-4" />
+                        Ver todo <ArrowRight className="w-4 h-4" />
                     </div>
                   </div>
 
