@@ -8,6 +8,7 @@ import { Dialog, DialogClose, DialogContent, DialogTrigger, DialogDescription, D
 import { Button } from "./ui/button"
 import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
+import { CreateTeacherModal } from "./ui/CreateTeacherModal"
 
 const Sidebar = () => {
   const userId = useAuthStore((s) => s.userId)
@@ -22,8 +23,11 @@ const Sidebar = () => {
   const [open, setOpen] = useState(true)
 
   // --- CAMBIO SENCILLO: Usamos la URL base de Axios directamente ---
-  // Esto asegura que si cambias el túnel en axios.ts, se cambia aquí también.
   const baseUrl = api.defaults.baseURL?.replace(/\/$/, '') || '';
+
+  // --- AGREGADO: Verificamos si es administrador ---
+  // Asumimos que el backend envía user.role.name = 'ADMIN'
+  const isAdmin = (user as any)?.role?.name === 'ADMIN';
 
   useEffect(() => {
     if (!isLogged || !userId) return
@@ -102,7 +106,7 @@ const Sidebar = () => {
                {user?.name || "Cargando..."}
              </p>
              <p className="text-xs text-gray-400 max-w-[200px] truncate text-center mt-1 min-h-[1rem]">
-               {user?.email || ""}
+               {(user as any)?.role?.name || ""}
              </p>
           </div>
         )}
@@ -111,6 +115,15 @@ const Sidebar = () => {
           <NavItem to="/dashboard" icon={<Home />} label="Panel de Control" />
           <NavItem to="/profile" icon={<User />} label="Perfil" />
           <NavItem to="/projects" icon={<Settings />} label="Proyectos" />
+
+          {/* --- AGREGADO: SECCIÓN DE ADMINISTRACIÓN --- */}
+          {isAdmin && (
+             <div className="pt-4 mt-4 border-t border-gray-800 animate-in fade-in slide-in-from-left-4 duration-500">
+                <p className="px-4 text-xs font-semibold text-gray-500 uppercase mb-2">Administración</p>
+                <CreateTeacherModal />
+             </div>
+          )}
+          {/* ------------------------------------------- */}
 
           <div className="py-7">
             {isLogged && (
