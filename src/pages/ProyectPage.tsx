@@ -72,6 +72,17 @@ const skillSchema = z.object({
   description: z.string().min(1, "La descripción es obligatoria"),
 })
 
+// --- INICIO: VALIDACIÓN ACTUALIZADA ---
+const validateYear = (dateString: string) => {
+  if (!dateString) return true;
+  const date = new Date(dateString);
+  const year = date.getUTCFullYear();
+  const currentYear = new Date().getFullYear();
+  // Regla: Año anterior, actual o siguiente
+  return year >= currentYear - 1 && year <= currentYear + 1;
+};
+// --- FIN: VALIDACIÓN ACTUALIZADA ---
+
 const projectSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
   description: z.string().min(1, "La problemática es obligatoria"),
@@ -79,9 +90,22 @@ const projectSchema = z.object({
   deliverables: z.string().optional(),
   link: z.string().optional(), 
   cycle: z.string().min(1, "Selecciona un ciclo"),
-  academic_period: z.string().min(1, "Selecciona un periodo"),
-  startDate: z.string().min(1, "Fecha de inicio requerida"),
-  endDate: z.string().min(1, "Fecha de fin requerida"),
+  academic_period: z.string().min(1, "Selecciona un período"),
+  
+  // --- INICIO: SCHEMA ACTUALIZADO ---
+  startDate: z.string()
+    .min(1, "Fecha de inicio requerida")
+    .refine(validateYear, { 
+      message: "La fecha debe ser del año anterior, actual o el siguiente" 
+    }),
+  
+  endDate: z.string()
+    .min(1, "Fecha de fin requerida")
+    .refine(validateYear, { 
+      message: "La fecha debe ser del año anterior, actual o el siguiente" 
+    }),
+  // --- FIN: SCHEMA ACTUALIZADO ---
+
   careerId: z.string().min(1, "Selecciona una carrera"),
   objectives: z.string().min(1, "Debes ingresar al menos un objetivo"),
   status: z.string().optional(),
@@ -330,7 +354,7 @@ const ProyectPage = () => {
     try {
         await api.delete(`/api/period/${id}`);
         await fetchPeriods(); 
-        showSuccess("Periodo eliminado correctamente"); 
+        showSuccess("Período eliminado correctamente"); 
     } catch (error) {
         console.error(error);
         showError("No se pudo eliminar (quizás tiene proyectos asociados).");
@@ -680,12 +704,12 @@ const ProyectPage = () => {
       <FormField control={form.control} name="academic_period" render={({ field }) => (
         <FormItem>
           <div className="flex items-center justify-between">
-            <FormLabel className="text-gray-300">Periodo</FormLabel>
+            <FormLabel className="text-gray-300">Período</FormLabel>
             <div className="flex items-center gap-2">
                {/* MODIFICADO: Agregada alerta de éxito al crear */}
                {isAdmin && <CreatePeriodModal onSuccess={() => {
                    fetchPeriods();
-                   showSuccess("Periodo creado correctamente");
+                   showSuccess("Período creado correctamente");
                }} />}
                
                {isAdmin && (
@@ -1239,12 +1263,12 @@ const ProyectPage = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-800/50 p-4 rounded-lg">
                   <div><h4 className="text-xs font-bold text-cyan-500 uppercase mb-1">Carrera</h4><p className="text-sm">{careers.find(c => c.id === viewProject.careerId)?.name || "N/A"}</p></div>
-                  <div><h4 className="text-xs font-bold text-cyan-500 uppercase mb-1">Periodo & Ciclo</h4><p className="text-sm">{viewProject.academic_period} - {viewProject.cycle}</p></div>
+                  <div><h4 className="text-xs font-bold text-cyan-500 uppercase mb-1">Período & Ciclo</h4><p className="text-sm">{viewProject.academic_period} - {viewProject.cycle}</p></div>
                   <div><h4 className="text-xs font-bold text-cyan-500 uppercase mb-1">Fechas</h4><p className="text-sm text-slate-300">{formatDate(viewProject.startDate)} al {formatDate(viewProject.endDate)}</p></div>
                   <div><h4 className="text-xs font-bold text-cyan-500 uppercase mb-1">Estado</h4><Badge variant="outline" className="text-cyan-300 border-cyan-700">{viewProject.status}</Badge></div>
                 </div>
                 <div><h3 className="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Problemática</h3><div className="text-slate-300 leading-relaxed whitespace-pre-wrap break-words bg-slate-950/30 p-3 rounded-md border border-slate-800 overflow-hidden">{viewProject.description}</div></div>
-                {viewProject.summary && (<div><h3 className="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Resumen Ejecutivo</h3><div className="text-slate-300 leading-relaxed whitespace-pre-wrap break-words bg-slate-950/30 p-3 rounded-md border border-slate-800 overflow-hidden">{viewProject.summary}</div></div>)}
+                {viewProject.summary && (<div><h3 className="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Resumen </h3><div className="text-slate-300 leading-relaxed whitespace-pre-wrap break-words bg-slate-950/30 p-3 rounded-md border border-slate-800 overflow-hidden">{viewProject.summary}</div></div>)}
                 {viewProject.objectives?.length > 0 && (<div><h3 className="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Objetivos</h3><div className="pl-5 space-y-2 text-slate-300 break-words">{viewProject.objectives.map((obj, i) => <div key={i}>{obj}</div>)}</div></div>)}
                 {viewProject.deliverables?.length > 0 && (() => {
                   const { link, textItems } = parseDeliverables(viewProject.deliverables);
