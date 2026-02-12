@@ -28,7 +28,11 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  
+  // Estados de errores específicos
   const [errorAlert, setErrorAlert] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("") // Para dinámicamente cambiar entre "Ya registrado" o "Inválido"
+  const [emailError, setEmailError] = useState(false) // Para poner el borde en rojo
   const [validationError, setValidationError] = useState(false)
   const [matchError, setMatchError] = useState(false)
   
@@ -59,6 +63,10 @@ const RegisterPage = () => {
   const handleRegister = async (e?: React.FormEvent) => {
     if (e) e.preventDefault() 
 
+    // Resetear estados de error antes de intentar
+    setEmailError(false);
+    setErrorAlert(false);
+
     if (!isPasswordValid) {
       setValidationError(true);
       setTimeout(() => setValidationError(false), 3000);
@@ -88,10 +96,27 @@ const RegisterPage = () => {
       
       navigate("/login")
     } catch (error: any) {
-      console.error('Error en el registro:', error.response?.data || error.message)
-      setErrorAlert(true)
-      setLoading(false) 
-      setTimeout(() => setErrorAlert(false), 3000)
+      const backendMessage = error.response?.data?.message || "";
+      console.error('Error en el registro:', backendMessage);
+
+      // --- LÓGICA DE DETECCIÓN DE ERRORES DE EMAIL ---
+      if (backendMessage.includes("ya se encuentra registrado")) {
+        setErrorMessage("Este correo ya está registrado.");
+        setEmailError(true);
+      } 
+      else if (backendMessage.includes("no es válido") || backendMessage.includes("no existe")) {
+        setErrorMessage("El correo ingresado no existe o es inválido.");
+        setEmailError(true);
+      } 
+      else {
+        setErrorMessage("Ocurrió un error inesperado. Inténtalo de nuevo.");
+      }
+
+      setErrorAlert(true);
+      setLoading(false);
+      
+      // El alerta se quita solo en 4 segundos, pero el borde rojo se queda hasta que escriba
+      setTimeout(() => setErrorAlert(false), 4000);
     }
   }
 
@@ -130,9 +155,15 @@ const RegisterPage = () => {
               type="email"
               placeholder="usuario@sudamericano.edu.ec"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-cyan-400"
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if(emailError) setEmailError(false); // Quitar rojo al escribir
+              }}
+              className={`bg-gray-700 text-white placeholder-gray-500 focus:border-cyan-400 ${
+                emailError ? "border-red-500 ring-1 ring-red-500" : "border-gray-600"
+              }`}
             />
+            {emailError && <p className="text-[10px] text-red-500 font-medium ml-1">{errorMessage}</p>}
           </div>
 
           {/* CARRERA */}
@@ -151,7 +182,7 @@ const RegisterPage = () => {
             </select>
           </div>
 
-          {/* CONTRASEÑA (Sin los cheques aquí) */}
+          {/* CONTRASEÑA */}
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
             <div className="relative">
@@ -174,7 +205,7 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          {/* CONFIRMAR CONTRASEÑA (Con los cheques debajo) */}
+          {/* CONFIRMAR CONTRASEÑA */}
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
             <div className="relative">
@@ -198,7 +229,6 @@ const RegisterPage = () => {
               </button>
             </div>
 
-            {/* ---> AQUÍ ESTÁN AHORA LOS REQUISITOS <--- */}
             <div className="mt-3 space-y-1.5 bg-gray-900/50 p-3 rounded-lg border border-gray-700">
               <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                 <PasswordRequirement met={hasMinLength} text="Mín. 6 caracteres" />
@@ -224,12 +254,12 @@ const RegisterPage = () => {
         </form>
       </div>
 
-      {/* ALERTAS */}
+      {/* ALERTAS DINÁMICAS */}
       {errorAlert && (
-        <Alert className="fixed top-4 right-4 w-auto bg-red-700 text-white border-none shadow-2xl z-[100]">
+        <Alert className="fixed top-4 right-4 w-auto bg-red-700 text-white border-none shadow-2xl z-[100] animate-in fade-in slide-in-from-top-4">
           <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Error de Registro</AlertTitle>
-          <AlertDescription>El correo ya existe o hubo un problema con el servidor.</AlertDescription>
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
 
