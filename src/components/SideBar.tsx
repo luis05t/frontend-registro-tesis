@@ -2,11 +2,17 @@ import { useEffect, useState } from "react"
 import { NavLink, useNavigate, Link } from "react-router-dom" 
 import api from "@/api/axios" 
 import { useAuthStore } from "@/store/authStore"
-import { Home, User, Settings, LogOut, Menu } from "lucide-react"
+import { 
+  Home, User, Settings, LogOut, Menu, 
+  AlertCircleIcon, CheckCircle2Icon 
+} from "lucide-react"
+import type { LucideProps } from "lucide-react" // Importación tipo-única para TS
 import avatar from "../assets/avatar.png"
-import { Dialog, DialogClose, DialogContent, DialogTrigger, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "./ui/dialog"
+import { 
+  Dialog, DialogClose, DialogContent, DialogTrigger, 
+  DialogDescription, DialogHeader, DialogFooter, DialogTitle 
+} from "./ui/dialog"
 import { Button } from "./ui/button"
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
 import { CreateTeacherModal } from "./ui/CreateTeacherModal"
 
@@ -22,19 +28,19 @@ const Sidebar = () => {
   const [errorAlert, setErrorAlert] = useState(false)
   const [open, setOpen] = useState(true)
 
-  // --- CAMBIO SENCILLO: Usamos la URL base de Axios directamente ---
+  // URL base para archivos estáticos (corregida para incluir /uploads/)
   const baseUrl = api.defaults.baseURL?.replace(/\/$/, '') || '';
 
-  // --- AGREGADO: Verificamos si es administrador ---
-  // Asumimos que el backend envía user.role.name = 'ADMIN'
+  // Verificación de rol administrativo
   const isAdmin = (user as any)?.role?.name === 'ADMIN';
 
   useEffect(() => {
     if (!isLogged || !userId) return
 
+    // Se añadió el prefijo /api/ para evitar el error 404
     api.get(`/api/users/${userId}`)
       .then((res) => {
-        // Al cargar, actualizamos el store global para que todos tengan los datos frescos
+        // Actualizamos el usuario en el estado global
         setUser(res.data)
       })
       .catch((err) => {
@@ -45,40 +51,45 @@ const Sidebar = () => {
   const handleLogout = () => {
     try {
       localStorage.removeItem("token")
-      localStorage.removeItem("id")
+      localStorage.removeItem("auth-storage") // Limpia el persist de Zustand
       logoutStore()
       setSuccess(true)
-      setTimeout(()=>{
+      setTimeout(() => {
         setSuccess(false);
         navigate("/login")
       }, 2000)
     } catch (error) {
       setErrorAlert(true)
+      setTimeout(() => setErrorAlert(false), 3000)
     }
   }
 
-  // Lógica de imagen simplificada y consistente con el Perfil
+  // Lógica de imagen simplificada y consistente con la configuración del backend
   const profileImage = user?.image 
-    ? (user.image.startsWith('http') ? user.image : `${baseUrl}${user.image}`)
+    ? (user.image.startsWith('http') ? user.image : `${baseUrl}/uploads/${user.image}`)
     : avatar;
 
   return (
     <>
+      {/* Botón de menú para móviles */}
       <button
         onClick={() => setOpen(!open)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-gray-200 rounded-md"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-gray-200 rounded-md cursor-pointer"
       >
         <Menu className="w-6 h-6" />
       </button>
+
+      {/* Overlay oscuro para móviles */}
       {open && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
           onClick={() => setOpen(false)}
         ></div>
       )}
+
       <aside
         className={`fixed top-0 left-0 h-full bg-gray-900 text-gray-100 shadow-xl transition-all duration-300 z-40 
-        ${open ? "translate-x-0" : "-translate-x-full"} w-64`}
+        ${open ? "translate-x-0" : "-translate-x-full"} w-64 flex flex-col`}
       >
         <div className="flex items-center justify-center py-6 border-b border-gray-800 gap-3">
           <img src="https://cdn-icons-png.flaticon.com/512/4196/4196599.png" alt="icon" className="w-7 h-7 "/>
@@ -102,98 +113,103 @@ const Sidebar = () => {
                 </div>
              </Link>
 
-             <p className="font-semibold text-center px-2 text-gray-200 min-h-[1.5rem]">
+             <p className="font-semibold text-center px-2 text-gray-200">
                {user?.name || "Cargando..."}
              </p>
-             <p className="text-xs text-gray-400 max-w-[200px] truncate text-center mt-1 min-h-[1rem]">
+             <p className="text-xs text-cyan-500 font-medium uppercase tracking-wider text-center mt-1">
                {(user as any)?.role?.name || ""}
              </p>
           </div>
         )}
 
-        <nav className="flex flex-col gap-1 p-3 mt-4">
-          <NavItem to="/dashboard" icon={<Home />} label="Panel de Control" />
-          <NavItem to="/profile" icon={<User />} label="Perfil" />
-          <NavItem to="/projects" icon={<Settings />} label="Proyectos" />
+        <nav className="flex flex-col gap-1 p-3 mt-4 flex-grow">
+          <NavItem to="/dashboard" icon={Home} label="Panel de Control" />
+          <NavItem to="/profile" icon={User} label="Perfil" />
+          <NavItem to="/projects" icon={Settings} label="Proyectos" />
 
-          {/* --- AGREGADO: SECCIÓN DE ADMINISTRACIÓN --- */}
+          {/* Sección de administración solo visible para ADMIN */}
           {isAdmin && (
              <div className="pt-4 mt-4 border-t border-gray-800 animate-in fade-in slide-in-from-left-4 duration-500">
                 <p className="px-4 text-xs font-semibold text-gray-500 uppercase mb-2">Administración</p>
                 <CreateTeacherModal />
              </div>
           )}
-          {/* ------------------------------------------- */}
-
-          <div className="py-7">
-            {isLogged && (
-                <Dialog>
-                  <DialogTrigger asChild className=" bg-red-600 rounded-lg hover:bg-red-800 cursor-pointer">
-                    <button className="flex items-center gap-2 p-3 mt-4 w-full text-left">
-                      <LogOut className="w-5 h-5" />
-                      <span>Cerrar Sesión</span>
-                    </button>
-                  </DialogTrigger>
-
-                  <DialogContent className="sm:max-w-md bg-gray-800 border-gray-700">
-                    <DialogHeader>
-                      <DialogTitle className="text-m text-white">Cerrar Sesión</DialogTitle>
-                    </DialogHeader>
-                    <DialogDescription className="text-gray-300">
-                      ¿Está seguro que desea cerrar sesión?
-                    </DialogDescription>
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button className="bg-gray-700 hover:bg-gray-900 text-white" variant="ghost">
-                          Cancelar
-                        </Button>
-                      </DialogClose>
-                      <Button
-                        className="bg-red-500 hover:bg-red-900 cursor-pointer text-white"
-                        onClick={handleLogout}
-                      >
-                        Cerrar Sesión
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-            )}
-            {success && (
-              <Alert className="fixed top-4 right-4 w-auto bg-green-700 text-white">
-                <CheckCircle2Icon />
-                <AlertTitle>Sesión cerrada</AlertTitle>
-                <AlertDescription>
-                  Se ha cerrado sesión correctamente!
-                </AlertDescription>
-              </Alert>
-            )}
-            {errorAlert && (
-              <Alert className="fixed top-4 right-4 w-auto bg-red-700 text-white">
-                <AlertCircleIcon />
-                <AlertTitle>Error al cerrar sesión</AlertTitle>
-                <AlertDescription>
-                  Ha ocurrido un error intentar cerrar sesión.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
         </nav>
+
+        {/* Botón de cerrar sesión al fondo */}
+        <div className="p-3 border-t border-gray-800">
+          {isLogged && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex items-center gap-3 p-3 w-full text-left rounded-lg text-red-400 hover:bg-red-950/30 hover:text-red-300 transition-colors cursor-pointer">
+                  <LogOut className="w-5 h-5" />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </DialogTrigger>
+
+              {/* aria-describedby={undefined} corrige la advertencia de accesibilidad de Radix UI */}
+              <DialogContent className="bg-gray-800 border-gray-700" aria-describedby={undefined}>
+                <DialogHeader>
+                  <DialogTitle className="text-white">Confirmar Salida</DialogTitle>
+                  <DialogDescription className="text-gray-300">
+                    ¿Estás seguro de que deseas cerrar tu sesión actual?
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2">
+                  <DialogClose asChild>
+                    <Button className="bg-gray-700 hover:bg-gray-600 text-white border-none" variant="ghost">
+                      Cancelar
+                    </Button>
+                  </DialogClose>
+                  <Button
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={handleLogout}
+                  >
+                    Cerrar Sesión
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </aside>
+
+      {/* Alertas flotantes */}
+      {success && (
+        <Alert className="fixed top-4 right-4 z-[100] w-auto bg-green-600 border-none text-white shadow-2xl animate-in slide-in-from-top-full">
+          <CheckCircle2Icon className="h-4 w-4" />
+          <AlertTitle>¡Éxito!</AlertTitle>
+          <AlertDescription>Se ha cerrado la sesión correctamente.</AlertDescription>
+        </Alert>
+      )}
+
+      {errorAlert && (
+        <Alert className="fixed top-4 right-4 z-[100] w-auto bg-red-600 border-none text-white shadow-2xl animate-in slide-in-from-top-full">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>No se pudo cerrar la sesión. Inténtalo de nuevo.</AlertDescription>
+        </Alert>
+      )}
     </>
   )
 }
 
-const NavItem = ({ to, icon, label }: { to: string; icon: any; label: string }) => (
+/**
+ * Componente NavItem mejorado para evitar errores de clonación de elementos TS
+ */
+const NavItem = ({ to, icon: Icon, label }: { to: string; icon: React.ComponentType<LucideProps>; label: string }) => (
   <NavLink
     to={to}
     className={({ isActive }) =>
-      `flex items-center gap-3 p-3 rounded-lg transition-all ${
-        isActive ? "bg-cyan-700 text-white" : "hover:bg-gray-800 text-gray-300"
+      `flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
+        isActive 
+          ? "bg-cyan-600/20 text-cyan-400 border-r-4 border-cyan-500 shadow-[inset_0_0_10px_rgba(6,182,212,0.1)]" 
+          : "hover:bg-gray-800/50 text-gray-400 hover:text-gray-200"
       }`
     }
   >
-    <div className="grid place-items-center">{icon}</div>
-    <span>{label}</span>
+    <Icon className="w-5 h-5" />
+    <span className="font-medium">{label}</span>
   </NavLink>
 )
 

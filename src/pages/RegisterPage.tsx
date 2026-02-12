@@ -15,11 +15,6 @@ type Career = {
   name: string
 }
 
-type Role = {
-  id: string,
-  name: string
-}
-
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -27,12 +22,12 @@ const RegisterPage = () => {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [role, setRole] = useState<Role[]>([])
   const [careerId, setCareerId] = useState('')
   const [errorAlert, setErrorAlert] = useState(false)
   const [careers, setCareers] = useState<Career[]>([])
   const [validationError, setValidationError] = useState(false)
   
+  // Requisitos de seguridad para la contraseña
   const hasMinLength = password.length >= 8;
   const hasNumber = /\d/.test(password);
   const hasUpperCase = /[A-Z]/.test(password);
@@ -45,28 +40,15 @@ const RegisterPage = () => {
     const fetchCareers = async () => {
       try {
         const res = await api.get('/api/careers?limit=100')
-
+        // Manejamos la estructura de respuesta de tu API (data.data o data)
         setCareers(res.data.data || res.data) 
       } catch (error) {
-        console.log('Error al obtener las carreras', error)
+        console.error('Error al obtener las carreras', error)
       }
     }
     fetchCareers()
-
-    const fetchRole = async () => {
-      try {
-        const res = await api.get('/api/roles?limit=100')
-        setRole(res.data.data || res.data)
-      } catch (error) {
-        console.log('Error al obtener roles')
-      }
-    }
-    fetchRole()
+    // Nota: Ya no buscamos roles aquí. El backend asignará 'user' por defecto.
   }, [])
-
-  const roleId = role
-    ? role.find(r => r.name === 'TEACHER')?.id
-    : "";
 
   const handleRegister = async (e?: React.FormEvent) => {
     if (e) e.preventDefault() 
@@ -77,26 +59,29 @@ const RegisterPage = () => {
       return; 
     }
 
+    if (!careerId) {
+      alert("Por favor, selecciona una carrera académica.");
+      return;
+    }
+
     setLoading(true) 
     
     try {
-      const res = await api.post('/api/users', {
+      // CORRECCIÓN: Usamos el endpoint de autenticación pública /api/auth/register
+      // NO enviamos roleId, el backend lo asignará automáticamente como lector.
+      await api.post('/api/auth/register', {
         name,
         email,
-        roleId,
         password,
         careerId
       })
-      console.log('Usuario registrado', res.data)
+      
       navigate("/login")
-
-    } catch (error) {
-      console.log('Error al intentar crear el usuario')
+    } catch (error: any) {
+      console.error('Error en el registro:', error.response?.data || error.message)
       setErrorAlert(true)
       setLoading(false) 
-      setTimeout(() => {
-        setErrorAlert(false)
-      }, 3000)
+      setTimeout(() => setErrorAlert(false), 3000)
     }
   }
 
@@ -111,58 +96,71 @@ const RegisterPage = () => {
     <>
       <div className="flex items-center justify-center min-h-screen bg-gray-900 p-4">
         <form onSubmit={handleRegister} className="w-full max-w-sm p-8 bg-gray-800 rounded-2xl shadow-lg space-y-6 text-gray-100">
-          <h1 className="text-xl font-semibold text-center text-white">Registrarse</h1>
-          <Label htmlFor="name">Nombre</Label>
-          <Input
-            required={true}
-            placeholder="Nombres"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="bg-gray-700 text-white placeholder-gray-400 border-gray-600 focus:border-cyan-400 focus:ring-cyan-400"
-          />
+          <div className="space-y-2 text-center">
+            <h1 className="text-2xl font-bold text-white">Crear Cuenta</h1>
+            <p className="text-sm text-gray-400">Regístrate para acceder como lector al repositorio.</p>
+          </div>
 
-          <Label htmlFor="email">E-mail</Label>
-          <Input
-            required={true}
-            type="email"
-            placeholder="tu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="bg-gray-700 text-white placeholder-gray-400 border-gray-600 focus:border-cyan-400 focus:ring-cyan-400"
-          />
-          <Label>Carrera</Label>
-          <select 
-            className="w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:border-cyan-400 focus:ring-cyan-400" 
-            value={careerId} 
-            onChange={(e) => setCareerId(e.target.value)}
-          >
-            <option value="">Selecciona una carrera...</option> 
-            {careers.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <Label htmlFor="name">Nombre Completo</Label>
+            <Input
+              required
+              placeholder="Ej. Luis Torres"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-cyan-400"
+            />
+          </div>
 
-          <div>
+          <div className="space-y-2">
+            <Label htmlFor="email">E-mail Institucional</Label>
+            <Input
+              required
+              type="email"
+              placeholder="usuario@sudamericano.edu.ec"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-cyan-400"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Carrera Académica</Label>
+            <select 
+              required
+              className="w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:border-cyan-400 focus:outline-none text-sm" 
+              value={careerId} 
+              onChange={(e) => setCareerId(e.target.value)}
+            >
+              <option value="">Selecciona tu carrera...</option> 
+              {careers.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
-            <div className="relative py-4" >
+            <div className="relative" >
               <Input
-                required={true}
+                required
                 type={showPassword ? "text" : "password"}
-                placeholder="Contraseña"
+                placeholder="Mínimo 8 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`placeholder-gray-400 border-gray-600 focus:border-cyan-400 focus:ring-cyan-400 ${validationError ? "border-red-500 focus:border-red-500" : ""}`}
+                className={`bg-gray-700 border-gray-600 text-white pr-10 focus:border-cyan-400 ${validationError ? "border-red-500" : ""}`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-cyan-400"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <div className="mt-2 space-y-1 bg-gray-900/50 p-3 rounded-md border border-gray-700">
-              <p className="text-xs text-gray-400 font-semibold mb-2">La contraseña debe contener:</p>
+            
+            {/* Indicadores de requisitos de contraseña */}
+            <div className="mt-3 space-y-1.5 bg-gray-900/50 p-3 rounded-lg border border-gray-700">
               <PasswordRequirement met={hasMinLength} text="Mínimo 8 caracteres" />
               <PasswordRequirement met={hasUpperCase} text="Una letra mayúscula" />
               <PasswordRequirement met={hasLowerCase} text="Una letra minúscula" />
@@ -171,40 +169,39 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white " disabled={loading}>
-            {loading ? "Cargando..." : "Registrarse"}
+          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-6" disabled={loading}>
+            {loading ? "Procesando registro..." : "Registrarse"}
           </Button>
+          
           <p className="text-center text-sm text-gray-400">
-            ¿Ya tienes una cuenta?{" "}
-            <Link to="/login" className="text-cyan-400 hover:underline">
-              Iniciar Sesión
+            ¿Ya tienes cuenta?{" "}
+            <Link to="/login" className="text-cyan-400 hover:underline font-medium">
+              Inicia Sesión
             </Link>
           </p>
         </form>
       </div>
 
+      {/* Alertas de error */}
       {errorAlert && (
-        <Alert className="fixed top-4 right-4 w-auto bg-red-700 text-white border-red-800 z-[10000]">
-          <AlertCircleIcon />
-          <AlertTitle>Error al crear usuario</AlertTitle>
-          <AlertDescription>
-            Ha ocurrido un error en el servidor, intente nuevamente.
-          </AlertDescription>
-        </Alert>
-      )}
-      {validationError && (
-        <Alert className="fixed top-4 right-4 w-auto bg-orange-600 text-white border-orange-700 z-[10000]">
-          <AlertCircleIcon />
-          <AlertTitle>Contraseña Débil</AlertTitle>
-          <AlertDescription>
-            Por favor cumple con todos los requisitos de la contraseña.
-          </AlertDescription>
+        <Alert className="fixed top-4 right-4 w-auto bg-red-700 text-white border-none shadow-2xl z-[100]">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error de Registro</AlertTitle>
+          <AlertDescription>El correo ya existe o hubo un problema con el servidor.</AlertDescription>
         </Alert>
       )}
 
-      <LoadingOverlay isVisible={loading} message="Creando tu cuenta..." />
+      {validationError && (
+        <Alert className="fixed top-4 right-4 w-auto bg-orange-600 text-white border-none shadow-2xl z-[100]">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Seguridad Insuficiente</AlertTitle>
+          <AlertDescription>La contraseña no cumple con los requisitos mínimos.</AlertDescription>
+        </Alert>
+      )}
+
+      <LoadingOverlay isVisible={loading} message="Creando tu cuenta de lector..." />
     </>
   )
 }
 
-export default RegisterPage
+export default RegisterPage;
