@@ -6,7 +6,7 @@ import {
   Home, User, Settings, LogOut, Menu, 
   AlertCircleIcon, CheckCircle2Icon 
 } from "lucide-react"
-import type { LucideProps } from "lucide-react" // Importación tipo-única para TS
+import type { LucideProps } from "lucide-react" 
 import avatar from "../assets/avatar.png"
 import { 
   Dialog, DialogClose, DialogContent, DialogTrigger, 
@@ -15,6 +15,7 @@ import {
 import { Button } from "./ui/button"
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
 import { CreateTeacherModal } from "./ui/CreateTeacherModal"
+import { BulkRegisterModal } from "./ui/BulkRegisterModal" // 1. IMPORTADO
 
 const Sidebar = () => {
   const userId = useAuthStore((s) => s.userId)
@@ -28,19 +29,14 @@ const Sidebar = () => {
   const [errorAlert, setErrorAlert] = useState(false)
   const [open, setOpen] = useState(true)
 
-  // URL base para archivos estáticos (corregida para incluir /uploads/)
   const baseUrl = api.defaults.baseURL?.replace(/\/$/, '') || '';
-
-  // Verificación de rol administrativo
   const isAdmin = (user as any)?.role?.name === 'ADMIN';
 
   useEffect(() => {
     if (!isLogged || !userId) return
 
-    // Se añadió el prefijo /api/ para evitar el error 404
     api.get(`/api/users/${userId}`)
       .then((res) => {
-        // Actualizamos el usuario en el estado global
         setUser(res.data)
       })
       .catch((err) => {
@@ -51,7 +47,7 @@ const Sidebar = () => {
   const handleLogout = () => {
     try {
       localStorage.removeItem("token")
-      localStorage.removeItem("auth-storage") // Limpia el persist de Zustand
+      localStorage.removeItem("auth-storage")
       logoutStore()
       setSuccess(true)
       setTimeout(() => {
@@ -64,14 +60,13 @@ const Sidebar = () => {
     }
   }
 
-  // Lógica de imagen simplificada y consistente con la configuración del backend
+  // 2. CORRECCIÓN DE IMAGEN: Se quitó el "/uploads/" sobrante
   const profileImage = user?.image 
-    ? (user.image.startsWith('http') ? user.image : `${baseUrl}/uploads/${user.image}`)
+    ? (user.image.startsWith('http') ? user.image : `${baseUrl}${user.image}`)
     : avatar;
 
   return (
     <>
-      {/* Botón de menú para móviles */}
       <button
         onClick={() => setOpen(!open)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-gray-200 rounded-md cursor-pointer"
@@ -79,7 +74,6 @@ const Sidebar = () => {
         <Menu className="w-6 h-6" />
       </button>
 
-      {/* Overlay oscuro para móviles */}
       {open && (
         <div
           className="fixed inset-0 bg-black/50 z-30 md:hidden"
@@ -116,27 +110,27 @@ const Sidebar = () => {
              <p className="font-semibold text-center px-2 text-gray-200">
                {user?.name || "Cargando..."}
              </p>
-             <p className="text-xs text-cyan-500 font-medium uppercase tracking-wider text-center mt-1">
-               {(user as any)?.role?.name || ""}
+
+             <p className="text-[11px] text-gray-500 font-normal text-center mt-1 break-all px-4 tracking-wide">
+               {user?.email || ""}
              </p>
           </div>
         )}
 
-        <nav className="flex flex-col gap-1 p-3 mt-4 flex-grow">
+        <nav className="flex flex-col gap-1 p-3 mt-4 flex-grow overflow-y-auto custom-scrollbar">
           <NavItem to="/dashboard" icon={Home} label="Panel de Control" />
           <NavItem to="/profile" icon={User} label="Perfil" />
           <NavItem to="/projects" icon={Settings} label="Proyectos" />
 
-          {/* Sección de administración solo visible para ADMIN */}
           {isAdmin && (
              <div className="pt-4 mt-4 border-t border-gray-800 animate-in fade-in slide-in-from-left-4 duration-500">
                 <p className="px-4 text-xs font-semibold text-gray-500 uppercase mb-2">Administración</p>
                 <CreateTeacherModal />
+                <BulkRegisterModal /> {/* 3. AGREGADO */}
              </div>
           )}
         </nav>
 
-        {/* Botón de cerrar sesión al fondo */}
         <div className="p-3 border-t border-gray-800">
           {isLogged && (
             <Dialog>
@@ -147,7 +141,6 @@ const Sidebar = () => {
                 </button>
               </DialogTrigger>
 
-              {/* aria-describedby={undefined} corrige la advertencia de accesibilidad de Radix UI */}
               <DialogContent className="bg-gray-800 border-gray-700" aria-describedby={undefined}>
                 <DialogHeader>
                   <DialogTitle className="text-white">Confirmar Salida</DialogTitle>
@@ -174,7 +167,6 @@ const Sidebar = () => {
         </div>
       </aside>
 
-      {/* Alertas flotantes */}
       {success && (
         <Alert className="fixed top-4 right-4 z-[100] w-auto bg-green-600 border-none text-white shadow-2xl animate-in slide-in-from-top-full">
           <CheckCircle2Icon className="h-4 w-4" />
@@ -194,9 +186,6 @@ const Sidebar = () => {
   )
 }
 
-/**
- * Componente NavItem mejorado para evitar errores de clonación de elementos TS
- */
 const NavItem = ({ to, icon: Icon, label }: { to: string; icon: React.ComponentType<LucideProps>; label: string }) => (
   <NavLink
     to={to}

@@ -65,14 +65,13 @@ import {
 import { Card } from "@/components/ui/card"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
 import { CreatePeriodModal } from "@/components/ui/CreatePeriodModal"
-import { useAuthStore } from "@/store/authStore" // AGREGADO: Importación del store
+import { useAuthStore } from "@/store/authStore" 
 
 const skillSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio"),
   description: z.string().min(1, "La descripción es obligatoria"),
 })
 
-// --- VALIDACIÓN DE AÑO ---
 const validateYear = (dateString: string) => {
   if (!dateString) return true;
   const date = new Date(dateString);
@@ -144,11 +143,8 @@ const ProyectPage = () => {
   const { id } = useParams() 
   const navigate = useNavigate()
 
-  // --- LÓGICA DE PERMISOS ---
-  const currentUser = useAuthStore((s) => s.user); // Obtenemos el usuario global
-  // Verificamos si es ADMIN o TEACHER para mostrar botones de gestión
+  const currentUser = useAuthStore((s) => s.user); 
   const isAdminOrTeacher = (currentUser as any)?.role?.name === 'ADMIN' || (currentUser as any)?.role?.name === 'TEACHER';
-  // --------------------------
 
   const [projects, setProjects] = useState<Project[]>([])
   const [skills, setSkills] = useState<Skill[]>([])
@@ -748,8 +744,8 @@ const ProyectPage = () => {
             <p className="text-gray-400 text-sm mt-1">Gestión de proyectos - Sudamericano</p>
           </div>
 
-          <div className="flex flex-col w-full xl:w-auto gap-4">
-            <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col w-full xl:w-auto gap-4 md:items-end">
+            <div className="flex flex-col md:flex-row gap-4 md:justify-end">
               <div className="relative w-full md:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                 <Input value={search} onChange={(e) => setSearch(e.target.value)} type="text" placeholder="Buscar..." className="pl-10 bg-gray-800 border-gray-700 text-white focus:ring-cyan-500 focus:border-cyan-500" />
@@ -764,7 +760,7 @@ const ProyectPage = () => {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700 text-white">
-                    <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Crear Nuevo Proyecto</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Crear Nueva Proyecto</DialogTitle></DialogHeader>
                     <Form {...createProjectForm}>
                       <form onSubmit={createProjectForm.handleSubmit(handleCreateProyect)}>
                         {renderFormFields(createProjectForm)}
@@ -788,14 +784,18 @@ const ProyectPage = () => {
                   ))}
                 </div>
               </div>
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-purple-400/80 uppercase tracking-wide">Origen</h5>
-                <div className="flex flex-wrap gap-2">
-                  {statusUserProjects.map((option) => (
-                    <Badge key={option} onClick={() => setFilterStatusUserProjects(option)} variant={filterStatusUserProjects === option ? "default" : "outline"} className={`cursor-pointer px-3 py-1 transition-all ${filterStatusUserProjects === option ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" : "text-gray-400 border-gray-600 hover:border-purple-500 hover:text-purple-400"}`}>{capitalizeFirst(option)}</Badge>
-                  ))}
+              
+              {/* SECCIÓN ORIGEN: Solo visible para Admin o Profesor */}
+              {isAdminOrTeacher && (
+                <div className="space-y-1">
+                  <h5 className="text-xs font-semibold text-purple-400/80 uppercase tracking-wide">Origen</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {statusUserProjects.map((option) => (
+                      <Badge key={option} onClick={() => setFilterStatusUserProjects(option)} variant={filterStatusUserProjects === option ? "default" : "outline"} className={`cursor-pointer px-3 py-1 transition-all ${filterStatusUserProjects === option ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600" : "text-gray-400 border-gray-600 hover:border-purple-500 hover:text-purple-400"}`}>{capitalizeFirst(option)}</Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

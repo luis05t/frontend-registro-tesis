@@ -98,14 +98,14 @@ const RegisterPage = () => {
         <form onSubmit={handleRegister} className="w-full max-w-sm p-8 bg-gray-800 rounded-2xl shadow-lg space-y-6 text-gray-100">
           <div className="space-y-2 text-center">
             <h1 className="text-2xl font-bold text-white">Crear Cuenta</h1>
-            <p className="text-sm text-gray-400">Regístrate para acceder como lector al repositorio.</p>
+            <p className="text-sm text-gray-400"></p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="name">Nombre Completo</Label>
             <Input
               required
-              placeholder="Ej. Luis Torres"
+              placeholder="Nombre"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-cyan-400"
@@ -113,7 +113,7 @@ const RegisterPage = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">E-mail Institucional</Label>
+            <Label htmlFor="email">E-mail</Label>
             <Input
               required
               type="email"
@@ -145,7 +145,7 @@ const RegisterPage = () => {
               <Input
                 required
                 type={showPassword ? "text" : "password"}
-                placeholder="Mínimo 8 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`bg-gray-700 border-gray-600 text-white pr-10 focus:border-cyan-400 ${validationError ? "border-red-500" : ""}`}
@@ -161,7 +161,7 @@ const RegisterPage = () => {
             
             {/* Indicadores de requisitos de contraseña */}
             <div className="mt-3 space-y-1.5 bg-gray-900/50 p-3 rounded-lg border border-gray-700">
-              <PasswordRequirement met={hasMinLength} text="Mínimo 8 caracteres" />
+              <PasswordRequirement met={hasMinLength} text="Mínimo 6 caracteres" />
               <PasswordRequirement met={hasUpperCase} text="Una letra mayúscula" />
               <PasswordRequirement met={hasLowerCase} text="Una letra minúscula" />
               <PasswordRequirement met={hasNumber} text="Un número" />
