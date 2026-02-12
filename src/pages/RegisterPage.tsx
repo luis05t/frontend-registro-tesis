@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import api from "@/api/axios"
 import { useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Check} from "lucide-react"
+import { Eye, EyeOff, Check, AlertCircleIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircleIcon } from "lucide-react" 
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
 
 type Career = {
@@ -17,22 +16,31 @@ type Career = {
 
 const RegisterPage = () => {
   const navigate = useNavigate()
+  
+  // Estados del formulario
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
+  const [careerId, setCareerId] = useState('')
+  
+  // Estados de interfaz
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [careerId, setCareerId] = useState('')
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errorAlert, setErrorAlert] = useState(false)
-  const [careers, setCareers] = useState<Career[]>([])
   const [validationError, setValidationError] = useState(false)
+  const [matchError, setMatchError] = useState(false)
   
-  // Requisitos de seguridad para la contraseña
-  const hasMinLength = password.length >= 8;
+  const [careers, setCareers] = useState<Career[]>([])
+  
+  // Requisitos de seguridad
+  const hasMinLength = password.length >= 6;
   const hasNumber = /\d/.test(password);
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const passwordsMatch = password === confirmPassword && password !== '';
 
   const isPasswordValid = hasMinLength && hasNumber && hasUpperCase && hasLowerCase && hasSymbol;
 
@@ -40,14 +48,12 @@ const RegisterPage = () => {
     const fetchCareers = async () => {
       try {
         const res = await api.get('/api/careers?limit=100')
-        // Manejamos la estructura de respuesta de tu API (data.data o data)
         setCareers(res.data.data || res.data) 
       } catch (error) {
         console.error('Error al obtener las carreras', error)
       }
     }
     fetchCareers()
-    // Nota: Ya no buscamos roles aquí. El backend asignará 'user' por defecto.
   }, [])
 
   const handleRegister = async (e?: React.FormEvent) => {
@@ -59,6 +65,12 @@ const RegisterPage = () => {
       return; 
     }
 
+    if (password !== confirmPassword) {
+        setMatchError(true);
+        setTimeout(() => setMatchError(false), 3000);
+        return;
+    }
+
     if (!careerId) {
       alert("Por favor, selecciona una carrera académica.");
       return;
@@ -67,8 +79,6 @@ const RegisterPage = () => {
     setLoading(true) 
     
     try {
-      // CORRECCIÓN: Usamos el endpoint de autenticación pública /api/auth/register
-      // NO enviamos roleId, el backend lo asignará automáticamente como lector.
       await api.post('/api/auth/register', {
         name,
         email,
@@ -86,7 +96,7 @@ const RegisterPage = () => {
   }
 
   const PasswordRequirement = ({ met, text }: { met: boolean, text: string }) => (
-    <div className={`flex items-center space-x-2 text-xs ${met ? "text-green-400" : "text-gray-500"}`}>
+    <div className={`flex items-center space-x-2 text-xs ${met ? "text-green-400 font-medium" : "text-gray-500"}`}>
       {met ? <Check size={14} /> : <div className="w-3.5 h-3.5 rounded-full border border-gray-500" />}
       <span>{text}</span>
     </div>
@@ -95,12 +105,12 @@ const RegisterPage = () => {
   return (
     <>
       <div className="flex items-center justify-center min-h-screen bg-gray-900 p-4">
-        <form onSubmit={handleRegister} className="w-full max-w-sm p-8 bg-gray-800 rounded-2xl shadow-lg space-y-6 text-gray-100">
+        <form onSubmit={handleRegister} className="w-full max-w-sm p-8 bg-gray-800 rounded-2xl shadow-lg space-y-5 text-gray-100">
           <div className="space-y-2 text-center">
             <h1 className="text-2xl font-bold text-white">Crear Cuenta</h1>
-            <p className="text-sm text-gray-400"></p>
           </div>
 
+          {/* NOMBRE */}
           <div className="space-y-2">
             <Label htmlFor="name">Nombre Completo</Label>
             <Input
@@ -112,6 +122,7 @@ const RegisterPage = () => {
             />
           </div>
 
+          {/* EMAIL */}
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
             <Input
@@ -124,6 +135,7 @@ const RegisterPage = () => {
             />
           </div>
 
+          {/* CARRERA */}
           <div className="space-y-2">
             <Label>Carrera Académica</Label>
             <select 
@@ -139,9 +151,10 @@ const RegisterPage = () => {
             </select>
           </div>
 
+          {/* CONTRASEÑA (Sin los cheques aquí) */}
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
-            <div className="relative" >
+            <div className="relative">
               <Input
                 required
                 type={showPassword ? "text" : "password"}
@@ -154,22 +167,51 @@ const RegisterPage = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-cyan-400"
+                tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            
-            {/* Indicadores de requisitos de contraseña */}
+          </div>
+
+          {/* CONFIRMAR CONTRASEÑA (Con los cheques debajo) */}
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+            <div className="relative">
+              <Input
+                required
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Repite la contraseña"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`bg-gray-700 border-gray-600 text-white pr-10 focus:border-cyan-400 ${
+                    matchError || (confirmPassword && !passwordsMatch) ? "border-red-500 focus:border-red-500" : ""
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-cyan-400"
+                tabIndex={-1}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            {/* ---> AQUÍ ESTÁN AHORA LOS REQUISITOS <--- */}
             <div className="mt-3 space-y-1.5 bg-gray-900/50 p-3 rounded-lg border border-gray-700">
-              <PasswordRequirement met={hasMinLength} text="Mínimo 6 caracteres" />
-              <PasswordRequirement met={hasUpperCase} text="Una letra mayúscula" />
-              <PasswordRequirement met={hasLowerCase} text="Una letra minúscula" />
-              <PasswordRequirement met={hasNumber} text="Un número" />
-              <PasswordRequirement met={hasSymbol} text="Un símbolo (!@#$%)" />
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                <PasswordRequirement met={hasMinLength} text="Mín. 6 caracteres" />
+                <PasswordRequirement met={hasUpperCase} text="Mayúscula" />
+                <PasswordRequirement met={hasLowerCase} text="Minúscula" />
+                <PasswordRequirement met={hasNumber} text="Número" />
+                <PasswordRequirement met={hasSymbol} text="Símbolo" />
+                <PasswordRequirement met={passwordsMatch} text="Coincidencia" />
+              </div>
             </div>
           </div>
 
-          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-6" disabled={loading}>
+          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-6 mt-4" disabled={loading}>
             {loading ? "Procesando registro..." : "Registrarse"}
           </Button>
           
@@ -182,7 +224,7 @@ const RegisterPage = () => {
         </form>
       </div>
 
-      {/* Alertas de error */}
+      {/* ALERTAS */}
       {errorAlert && (
         <Alert className="fixed top-4 right-4 w-auto bg-red-700 text-white border-none shadow-2xl z-[100]">
           <AlertCircleIcon className="h-4 w-4" />
@@ -195,7 +237,15 @@ const RegisterPage = () => {
         <Alert className="fixed top-4 right-4 w-auto bg-orange-600 text-white border-none shadow-2xl z-[100]">
           <AlertCircleIcon className="h-4 w-4" />
           <AlertTitle>Seguridad Insuficiente</AlertTitle>
-          <AlertDescription>La contraseña no cumple con los requisitos mínimos.</AlertDescription>
+          <AlertDescription>La contraseña no cumple con los requisitos.</AlertDescription>
+        </Alert>
+      )}
+
+      {matchError && (
+        <Alert className="fixed top-4 right-4 w-auto bg-red-600 text-white border-none shadow-2xl z-[100]">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error de Contraseña</AlertTitle>
+          <AlertDescription>Las contraseñas no coinciden.</AlertDescription>
         </Alert>
       )}
 

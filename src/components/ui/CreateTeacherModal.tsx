@@ -232,13 +232,13 @@ export function CreateTeacherModal() {
                 {/* Panel de Validación de Seguridad */}
                 <div className="bg-gray-900/50 p-2 rounded border border-gray-700 grid grid-cols-2 gap-x-2 gap-y-1">
                    <p className="col-span-2 text-[9px] font-bold text-gray-500 uppercase mb-1 tracking-wider">Requisitos:</p>
-                   <RequirementItem label="6 letras" met={hasMinLength} />
+                   <RequirementItem label="Mín. 6 caracteres" met={hasMinLength} />
                    <RequirementItem label="Mayúscula" met={hasUppercase} />
                    <RequirementItem label="Minúscula" met={hasLowercase} />
                    <RequirementItem label="Número" met={hasNumber} />
                    <RequirementItem label="Símbolo" met={hasSymbol} />
                    {/* Sale en ROJO si no coinciden */}
-                   <RequirementItem label="Coinciden" met={passwordsMatch} error={showMatchError} />
+                   <RequirementItem label="Las contraseñas coinciden" met={passwordsMatch} error={showMatchError} />
                 </div>
               </div>
 
