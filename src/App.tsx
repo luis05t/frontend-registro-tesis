@@ -4,8 +4,6 @@ import UserProfile from './pages/UserProfile'
 import RegisterPage from './pages/RegisterPage'
 import Dashboad from './pages/Dashboard'
 import ProyectPage from './pages/ProyectPage'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
 
 function App() {
   return (
@@ -16,13 +14,10 @@ function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/dashboard" element={<Dashboad  />} />
       
+      {/* RUTA DINÁMICA: IMPORTANTE */}
       <Route path="/projects" element={<ProyectPage  />} />
       <Route path="/projects/:id" element={<ProyectPage  />} />
-
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
     </Routes>
   )
 }
-
 export default App
