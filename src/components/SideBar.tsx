@@ -13,9 +13,9 @@ import {
   DialogDescription, DialogHeader, DialogFooter, DialogTitle 
 } from "./ui/dialog"
 import { Button } from "./ui/button"
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CreateTeacherModal } from "./ui/CreateTeacherModal"
-import { BulkRegisterModal } from "./ui/BulkRegisterModal" // 1. IMPORTADO
+import { BulkRegisterModal } from "./ui/BulkRegisterModal" 
 
 const Sidebar = () => {
   const userId = useAuthStore((s) => s.userId)
@@ -60,7 +60,6 @@ const Sidebar = () => {
     }
   }
 
-  // 2. CORRECCIÓN DE IMAGEN: Se quitó el "/uploads/" sobrante
   const profileImage = user?.image 
     ? (user.image.startsWith('http') ? user.image : `${baseUrl}${user.image}`)
     : avatar;
@@ -85,9 +84,17 @@ const Sidebar = () => {
         className={`fixed top-0 left-0 h-full bg-gray-900 text-gray-100 shadow-xl transition-all duration-300 z-40 
         ${open ? "translate-x-0" : "-translate-x-full"} w-64 flex flex-col`}
       >
-        <div className="flex items-center justify-center py-6 border-b border-gray-800 gap-3">
-          <img src="https://cdn-icons-png.flaticon.com/512/4196/4196599.png" alt="icon" className="w-7 h-7 "/>
-          <h1 className="text-white font-bold text-xl">RepoDigital ITS</h1>
+        {/* SECCIÓN DEL LOGO ACTUALIZADA */}
+        <div className="flex items-center gap-3 px-4 py-6 border-b border-gray-800">
+          <img 
+            src="https://eva.sudamericano.edu.ec/pluginfile.php/1/theme_moove/logo/1762397214/faviconSuda%20%281%29%20%281%29.png" 
+            alt="Logo Sudamericano" 
+            className="w-10 h-10 object-contain"
+          />
+          <div className="flex flex-col">
+            <h1 className="text-white font-bold text-lg leading-tight">RepoDigital</h1>
+            <span className="text-cyan-500 text-[10px] font-bold tracking-widest uppercase">ITS Sudamericano</span>
+          </div>
         </div>
 
         {isLogged && (
@@ -126,7 +133,7 @@ const Sidebar = () => {
              <div className="pt-4 mt-4 border-t border-gray-800 animate-in fade-in slide-in-from-left-4 duration-500">
                 <p className="px-4 text-xs font-semibold text-gray-500 uppercase mb-2">Administración</p>
                 <CreateTeacherModal />
-                <BulkRegisterModal /> {/* 3. AGREGADO */}
+                <BulkRegisterModal />
              </div>
           )}
         </nav>
@@ -202,4 +209,4 @@ const NavItem = ({ to, icon: Icon, label }: { to: string; icon: React.ComponentT
   </NavLink>
 )
 
-export default Sidebar
+export default Sidebar;
