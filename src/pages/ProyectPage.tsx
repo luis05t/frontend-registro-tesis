@@ -339,12 +339,15 @@ const ProyectPage = () => {
   }
 
   const handleDeletePeriod = async (id: string) => {
+    setLoading(true);
     try {
         await api.delete(`/api/period/${id}`);
         await fetchPeriods(); 
-        showSuccess("Período eliminado correctamente"); 
+        setLoading(false);
+        setTimeout(() => showSuccess("Período eliminado correctamente"), 300); 
     } catch (error) {
-        showError("No se pudo eliminar (quizás tiene proyectos asociados).");
+        setLoading(false);
+        showError("No se pudo eliminar.");
     }
   }
 
@@ -656,7 +659,6 @@ const ProyectPage = () => {
     )
   }
 
-  // --- LÓGICA RENDER FORM FIELDS CON CONDICIONAL isEdit ---
   const renderFormFields = (form: any, isEdit: boolean = false) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
       <FormField control={form.control} name="name" render={({ field }) => (
@@ -671,7 +673,6 @@ const ProyectPage = () => {
       
       <FormField control={form.control} name="cycle" render={({ field }) => (
         <FormItem>
-          {/* Div h-8 para alinear con el Periodo */}
           <div className="flex items-center justify-between h-8 mb-1">
              <FormLabel className="text-gray-300">Ciclo</FormLabel>
           </div>
@@ -692,8 +693,8 @@ const ProyectPage = () => {
         <FormItem>
           <div className="flex items-center justify-between h-8 mb-1">
             <FormLabel className="text-gray-300">Período</FormLabel>
-            {/* CONDICIONAL: Solo mostrar botones si NO es edición */}
-            <div className="flex items-center gap-2">
+            {/* CORRECCIÓN: Detenemos el clic para que no valide el formulario de atrás */}
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                {!isEdit && isAdmin && <CreatePeriodModal onSuccess={() => {
                    fetchPeriods();
                    showSuccess("Período creado correctamente");
@@ -779,7 +780,8 @@ const ProyectPage = () => {
   return (
     <div className="flex bg-gray-900 min-h-screen text-gray-100 font-sans">
       <Sidebar />
-      <main className="flex-1 ml-0 md:ml-64 p-6 transition-all w-full overflow-x-hidden relative">
+      {/* CORRECCIÓN: pt-20 solo para móviles para que no tape el botón hamburguesa */}
+      <main className="flex-1 ml-0 md:ml-64 p-6 pt-20 md:pt-6 transition-all w-full overflow-x-hidden relative">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6">
           <div className="flex-shrink-0">
             <h2 className="text-3xl font-bold text-white tracking-tight">Panel de Proyectos</h2>
@@ -804,7 +806,6 @@ const ProyectPage = () => {
                     <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Crear Nueva Proyecto</DialogTitle></DialogHeader>
                     <Form {...createProjectForm}>
                       <form onSubmit={createProjectForm.handleSubmit(handleCreateProyect)}>
-                        {/* LLAMADA CON isEdit = false */}
                         {renderFormFields(createProjectForm, false)}
                         <DialogFooter>
                           <Button type="button" variant="ghost" className="hover:bg-gray-700" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
@@ -916,6 +917,7 @@ const ProyectPage = () => {
                             <TableCell className="py-4 align-top max-w-[350px]">{p.objectives?.length > 0 ? (<div className="space-y-1">{p.objectives.slice(0, 3).map((obj, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{obj}</div>))}{p.objectives.length > 3 && <div className="text-xs text-cyan-500 italic">... y {p.objectives.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin objetivos</span>}</TableCell>
                             <TableCell className="py-4 align-top max-w-[350px]">{textItems?.length > 0 ? (<div className="space-y-1">{textItems.slice(0, 3).map((del, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{del}</div>))}{textItems.length > 3 && <div className="text-xs text-cyan-500 italic">... y {textItems.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin entregables</span>}{link && (<div className="mt-2"><a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 hover:underline" onClick={(e) => e.stopPropagation()}><LinkIcon className="w-3 h-3" /> Ver enlace</a></div>)}</TableCell>
                             <TableCell className="py-4 align-top"><div className="space-y-3">{p.status === 'pendiente' ? (<Badge variant="outline" className="text-red-400 border-red-900 bg-red-900/20 flex w-fit items-center gap-1"><Clock className="w-3 h-3" /> Pendiente</Badge>) : (<Badge variant="outline" className={`${p.status === 'completado' ? 'text-green-400 border-green-900 bg-green-900/20' : 'text-cyan-400 border-cyan-900 bg-cyan-900/20'}`}>{capitalizeFirst(p.status)}</Badge>)}<div className="text-xs text-gray-400"><div className="mb-1"><span className="text-gray-600">Inicio:</span> <br />{formatDate(p.startDate)}</div><div><span className="text-gray-600">Fin:</span> <br />{formatDate(p.endDate)}</div></div></div></TableCell>
+                            
                             {isAdminOrTeacher && (
                               <TableCell className="py-4 align-top text-right">
                                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -944,7 +946,6 @@ const ProyectPage = () => {
           <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Editar Proyecto</DialogTitle></DialogHeader>
           <Form {...editProjectForm}>
             <form onSubmit={editProjectForm.handleSubmit(handleEditProyect)}>
-                {/* LLAMADA CON isEdit = true -> Desaparecen botones de Periodo */}
                 {renderFormFields(editProjectForm, true)}
                 <DialogFooter>
                     <Button type="button" variant="ghost" className="hover:bg-gray-700" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
