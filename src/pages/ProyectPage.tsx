@@ -125,6 +125,7 @@ type Project = {
   createdAt?: string
   updatedAt?: string
   deliverables: string[]
+  projectSkills?: { id: string, skillId: string, skill: Skill }[] 
 }
 
 type Career = { id: string, name: string }
@@ -230,7 +231,7 @@ const ProyectPage = () => {
   const fetchProjects = async () => {
     setLoadingProjects(true)
     try {
-      const res = await api.get("/api/projects?limit=1000")
+      const res = await api.get("/api/projects?limit=50000") 
       const rawData = res.data
       setProjects(Array.isArray(rawData) ? rawData : (rawData.data || []))
     } catch (error) {
@@ -250,11 +251,11 @@ const ProyectPage = () => {
 
   const fetchSkillsData = async () => {
     try {
-      const resSkills = await api.get('/api/skills?limit=1000')
+      const resSkills = await api.get('/api/skills?limit=10000') 
       const skillsRaw = resSkills.data
       setSkills(Array.isArray(skillsRaw) ? skillsRaw : (skillsRaw.data || []))
       
-      const resProjectSkills = await api.get('/api/porjects-skills?limit=1000')
+      const resProjectSkills = await api.get('/api/porjects-skills?limit=100000') 
       const pSkillsRaw = resProjectSkills.data
       setProjectSkills(Array.isArray(pSkillsRaw) ? pSkillsRaw : (pSkillsRaw.data || []))
     } catch (error) {
@@ -318,6 +319,10 @@ const ProyectPage = () => {
   const isAdmin = roleName?.toLowerCase().includes("admin");
 
   const getProjectSkillsDisplay = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project?.projectSkills) {
+        return project.projectSkills.map(ps => ps.skill);
+    }
     const relations = projectSkills.filter(ps => ps.projectId === projectId);
     return relations.map(rel => skills.find(s => s.id === rel.skillId)).filter(Boolean) as Skill[];
   }
@@ -486,24 +491,41 @@ const ProyectPage = () => {
         endDate: new Date(values.endDate).toISOString(),
       });
 
-      const currentRelations = projectSkills.filter(ps => ps.projectId === editingProject.id);
-      const currentSkillIds = currentRelations.map(ps => ps.skillId);
+      const currentRelations = editingProject.projectSkills || projectSkills.filter(ps => ps.projectId === editingProject.id);
+      const currentSkillIds = currentRelations.map((ps: any) => ps.skillId || ps.skill?.id);
+      
       const skillsToAdd = selectedSkills.filter(sid => !currentSkillIds.includes(sid));
+      const relationsToDelete = currentRelations.filter((rel: any) => !selectedSkills.includes(rel.skillId || rel.skill?.id));
 
-      if (skillsToAdd.length > 0) {
-        await Promise.all(skillsToAdd.map(skillId =>
+      const promises: Promise<any>[] = [];
+
+      skillsToAdd.forEach(skillId => {
+        promises.push(
           api.post('/api/porjects-skills', { projectId: editingProject.id, skillId })
-        ));
-      }
+            .catch(error => {
+              if (error.response && (error.response.status === 400 || error.response.status === 409)) return null;
+              throw error;
+            })
+        );
+      });
+
+      relationsToDelete.forEach((rel: any) => {
+        const relId = rel.id;
+        if (relId) promises.push(api.delete(`/api/porjects-skills/${relId}`));
+      });
+      
+      await Promise.all(promises);
       
       await fetchProjects();
       await fetchSkillsData();
+      
       setIsEditOpen(false)
       setLoading(false);
-      setTimeout(() => showSuccess("Cambios guardados"), 300);
+      setTimeout(() => showSuccess("Proyecto actualizado correctamente"), 300);
     } catch (error) {
+      console.error(error);
       setLoading(false);
-      showError("Error al editar.");
+      showError("Error al editar el proyecto.");
     }
   };
 
@@ -524,9 +546,9 @@ const ProyectPage = () => {
 
   const loadProjectData = (project: Project) => {
     setEditingProject(project)
-    const existingSkillIds = projectSkills
-      .filter(ps => ps.projectId === project.id)
-      .map(ps => ps.skillId);
+    const existingSkillIds = (project.projectSkills?.map(ps => ps.skillId || ps.skill.id)) || 
+                             (projectSkills.filter(ps => ps.projectId === project.id).map(ps => ps.skillId));
+    
     setSelectedSkills(existingSkillIds);
 
     const { link, textItems } = parseDeliverables(project.deliverables || []);
@@ -634,7 +656,8 @@ const ProyectPage = () => {
     )
   }
 
-  const renderFormFields = (form: any) => (
+  // --- LÓGICA RENDER FORM FIELDS CON CONDICIONAL isEdit ---
+  const renderFormFields = (form: any, isEdit: boolean = false) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
       <FormField control={form.control} name="name" render={({ field }) => (
         <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Nombre del Proyecto</FormLabel><FormControl><Textarea className="bg-gray-900 border-gray-600 mt-1" {...field} /></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
@@ -645,19 +668,37 @@ const ProyectPage = () => {
       <FormField control={form.control} name="summary" render={({ field }) => (
         <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Resumen</FormLabel><FormControl><Textarea className="bg-gray-900 border-gray-600 mt-1" {...field} /></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
+      
       <FormField control={form.control} name="cycle" render={({ field }) => (
-        <FormItem><FormLabel className="text-gray-300">Ciclo</FormLabel><FormControl><select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}><option value="">Seleccionar...</option><option>Primer Ciclo</option><option>Segundo Ciclo</option><option>Tercer Ciclo</option><option>Cuarto Ciclo</option></select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
+        <FormItem>
+          {/* Div h-8 para alinear con el Periodo */}
+          <div className="flex items-center justify-between h-8 mb-1">
+             <FormLabel className="text-gray-300">Ciclo</FormLabel>
+          </div>
+          <FormControl>
+            <select className="w-full h-9 rounded-md bg-gray-900 border border-gray-600 text-sm text-white px-3" {...field}>
+              <option value="">Seleccionar...</option>
+              <option>Primer Ciclo</option>
+              <option>Segundo Ciclo</option>
+              <option>Tercer Ciclo</option>
+              <option>Cuarto Ciclo</option>
+            </select>
+          </FormControl>
+          <FormMessage className="text-red-500 text-xs" />
+        </FormItem>
       )} />
+
       <FormField control={form.control} name="academic_period" render={({ field }) => (
         <FormItem>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between h-8 mb-1">
             <FormLabel className="text-gray-300">Período</FormLabel>
+            {/* CONDICIONAL: Solo mostrar botones si NO es edición */}
             <div className="flex items-center gap-2">
-               {isAdmin && <CreatePeriodModal onSuccess={() => {
+               {!isEdit && isAdmin && <CreatePeriodModal onSuccess={() => {
                    fetchPeriods();
                    showSuccess("Período creado correctamente");
                }} />}
-               {isAdmin && (
+               {!isEdit && isAdmin && (
                   <Dialog>
                     <DialogTrigger asChild>
                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-red-400" title="Borrar Periodos">
@@ -683,7 +724,7 @@ const ProyectPage = () => {
             </div>
           </div>
           <FormControl>
-            <select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}>
+            <select className="w-full h-9 rounded-md bg-gray-900 border border-gray-600 text-sm text-white px-3" {...field}>
               <option value="">Seleccionar...</option>
               {periods.map((p) => (<option key={p.id} value={p.name}>{p.name}</option>))}
             </select>
@@ -691,6 +732,7 @@ const ProyectPage = () => {
           <FormMessage className="text-red-500 text-xs" />
         </FormItem>
       )} />
+
       <FormField control={form.control} name="startDate" render={({ field }) => (
         <FormItem><FormLabel className="text-gray-300">Fecha Inicio</FormLabel><FormControl><Input type="date" className="bg-gray-900 border-gray-600 mt-1" {...field} /></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
@@ -698,7 +740,7 @@ const ProyectPage = () => {
         <FormItem><FormLabel className="text-gray-300">Fecha Fin</FormLabel><FormControl><Input type="date" className="bg-gray-900 border-gray-600 mt-1" {...field} /></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
       <FormField control={form.control} name="careerId" render={({ field }) => (
-        <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Carrera</FormLabel><FormControl><select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}><option value="">Seleccionar carrera...</option>{careers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
+        <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Carrera</FormLabel><FormControl><select className="w-full mt-1 h-9 rounded-md bg-gray-900 border border-gray-600 text-sm text-white px-3" {...field}><option value="">Seleccionar carrera...</option>{careers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
       <div className="md:col-span-2 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
         <Label className="text-cyan-400 font-bold mb-3 block items-center gap-2"><Code2 className="w-4 h-4" /> Habilidades Requeridas</Label>
@@ -729,7 +771,7 @@ const ProyectPage = () => {
         <FormItem className="md:col-span-2"><FormLabel className="text-gray-300 flex items-center gap-2"><LinkIcon className="w-3 h-3" /> Enlace de Repositorio/Drive</FormLabel><FormControl><Input className="bg-gray-900 border-gray-600 mt-1" placeholder="https://..." {...field} /></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
       <FormField control={form.control} name="status" render={({ field }) => (
-        <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Estado del proyecto</FormLabel><FormControl><select className="w-full mt-1 p-2 rounded-md bg-gray-900 border border-gray-600 text-sm text-white" {...field}><option value="">Selecciona un estado...</option><option value="en progreso">En progreso</option><option value="completado">Completado</option></select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
+        <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Estado del proyecto</FormLabel><FormControl><select className="w-full mt-1 h-9 rounded-md bg-gray-900 border border-gray-600 text-sm text-white px-3" {...field}><option value="">Selecciona un estado...</option><option value="en progreso">En progreso</option><option value="completado">Completado</option></select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
     </div>
   )
@@ -751,7 +793,6 @@ const ProyectPage = () => {
                 <Input value={search} onChange={(e) => setSearch(e.target.value)} type="text" placeholder="Buscar..." className="pl-10 bg-gray-800 border-gray-700 text-white focus:ring-cyan-500 focus:border-cyan-500" />
               </div>
 
-              {/* PROTECCIÓN 1: Nuevo Proyecto - Solo para Admin/Teacher */}
               {isAdminOrTeacher && (
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                   <DialogTrigger asChild>
@@ -763,7 +804,8 @@ const ProyectPage = () => {
                     <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Crear Nueva Proyecto</DialogTitle></DialogHeader>
                     <Form {...createProjectForm}>
                       <form onSubmit={createProjectForm.handleSubmit(handleCreateProyect)}>
-                        {renderFormFields(createProjectForm)}
+                        {/* LLAMADA CON isEdit = false */}
+                        {renderFormFields(createProjectForm, false)}
                         <DialogFooter>
                           <Button type="button" variant="ghost" className="hover:bg-gray-700" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
                           <Button type="submit" className="bg-cyan-600 hover:bg-cyan-700" disabled={loading}>{loading ? "Creando..." : "Guardar Proyecto"}</Button>
@@ -785,7 +827,6 @@ const ProyectPage = () => {
                 </div>
               </div>
               
-              {/* SECCIÓN ORIGEN: Solo visible para Admin o Profesor */}
               {isAdminOrTeacher && (
                 <div className="space-y-1">
                   <h5 className="text-xs font-semibold text-purple-400/80 uppercase tracking-wide">Origen</h5>
@@ -808,7 +849,6 @@ const ProyectPage = () => {
               <div className="p-4 border-b border-gray-700 bg-gray-900/30 flex justify-between items-center">
                 <h2 className="text-lg font-bold text-white">Directorio Completo de Proyectos</h2>
                 
-                {/* PROTECCIÓN 2: Gestionar Habilidades - Solo para Admin/Teacher */}
                 {isAdminOrTeacher && (
                   <Dialog open={isSkillsManagerOpen} onOpenChange={setIsSkillsManagerOpen}>
                     <DialogTrigger asChild>
@@ -849,8 +889,6 @@ const ProyectPage = () => {
                       <TableHead className="text-gray-300 font-bold min-w-[250px]">Objetivos</TableHead>
                       <TableHead className="text-gray-300 font-bold min-w-[250px]">Entregables</TableHead>
                       <TableHead className="text-gray-300 font-bold min-w-[150px]">Fechas & Estado</TableHead>
-                      
-                      {/* PROTECCIÓN 3: Cabecera de Acciones - Solo visible para Admin/Teacher */}
                       {isAdminOrTeacher && <TableHead className="text-gray-300 font-bold text-right">Acciones</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -878,8 +916,6 @@ const ProyectPage = () => {
                             <TableCell className="py-4 align-top max-w-[350px]">{p.objectives?.length > 0 ? (<div className="space-y-1">{p.objectives.slice(0, 3).map((obj, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{obj}</div>))}{p.objectives.length > 3 && <div className="text-xs text-cyan-500 italic">... y {p.objectives.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin objetivos</span>}</TableCell>
                             <TableCell className="py-4 align-top max-w-[350px]">{textItems?.length > 0 ? (<div className="space-y-1">{textItems.slice(0, 3).map((del, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{del}</div>))}{textItems.length > 3 && <div className="text-xs text-cyan-500 italic">... y {textItems.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin entregables</span>}{link && (<div className="mt-2"><a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 hover:underline" onClick={(e) => e.stopPropagation()}><LinkIcon className="w-3 h-3" /> Ver enlace</a></div>)}</TableCell>
                             <TableCell className="py-4 align-top"><div className="space-y-3">{p.status === 'pendiente' ? (<Badge variant="outline" className="text-red-400 border-red-900 bg-red-900/20 flex w-fit items-center gap-1"><Clock className="w-3 h-3" /> Pendiente</Badge>) : (<Badge variant="outline" className={`${p.status === 'completado' ? 'text-green-400 border-green-900 bg-green-900/20' : 'text-cyan-400 border-cyan-900 bg-cyan-900/20'}`}>{capitalizeFirst(p.status)}</Badge>)}<div className="text-xs text-gray-400"><div className="mb-1"><span className="text-gray-600">Inicio:</span> <br />{formatDate(p.startDate)}</div><div><span className="text-gray-600">Fin:</span> <br />{formatDate(p.endDate)}</div></div></div></TableCell>
-                            
-                            {/* PROTECCIÓN 4: Celdas de Acciones - Solo visible para Admin/Teacher */}
                             {isAdminOrTeacher && (
                               <TableCell className="py-4 align-top text-right">
                                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -906,7 +942,16 @@ const ProyectPage = () => {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700 text-white z-[90]">
           <DialogHeader><DialogTitle className="text-xl font-bold text-cyan-400">Editar Proyecto</DialogTitle></DialogHeader>
-          <Form {...editProjectForm}><form onSubmit={editProjectForm.handleSubmit(handleEditProyect)}>{renderFormFields(editProjectForm)}<DialogFooter><Button type="button" variant="ghost" className="hover:bg-gray-700" onClick={() => setIsEditOpen(false)}>Cancelar</Button><Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={loading}>Guardar Cambios</Button></DialogFooter></form></Form>
+          <Form {...editProjectForm}>
+            <form onSubmit={editProjectForm.handleSubmit(handleEditProyect)}>
+                {/* LLAMADA CON isEdit = true -> Desaparecen botones de Periodo */}
+                {renderFormFields(editProjectForm, true)}
+                <DialogFooter>
+                    <Button type="button" variant="ghost" className="hover:bg-gray-700" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
+                    <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={loading}>Guardar Cambios</Button>
+                </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
       <Dialog open={!!editingSkill} onOpenChange={(open) => !open && setEditingSkill(null)}>
