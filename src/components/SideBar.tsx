@@ -6,15 +6,16 @@ import {
   Home, User, Settings, LogOut, Menu, X,
   CheckCircle2Icon 
 } from "lucide-react"
+// Se eliminó LucideProps y AlertCircleIcon porque no se usaban
 import avatar from "../assets/avatar.png"
 import { 
   Dialog, DialogClose, DialogContent, DialogTrigger, 
   DialogDescription, DialogHeader, DialogFooter, DialogTitle 
 } from "./ui/dialog"
-import { Button } from "./ui/button"
+import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CreateTeacherModal } from "./ui/CreateTeacherModal"
-import { BulkRegisterModal } from "./ui/BulkRegisterModal"
+import { BulkRegisterModal } from "./ui/BulkRegisterModal" 
 
 const Sidebar = () => {
   const userId = useAuthStore((s) => s.userId)
@@ -25,8 +26,7 @@ const Sidebar = () => {
   
   const navigate = useNavigate()
   const [success, setSuccess] = useState(false)
-  
-  // CORRECCIÓN: Se eliminó 'errorAlert' porque no se estaba usando en ninguna parte
+  // Se eliminó errorAlert porque no se estaba renderizando nada con él
   const [open, setOpen] = useState(false)
 
   const baseUrl = api.defaults.baseURL?.replace(/\/$/, '') || '';
@@ -34,25 +34,20 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (!isLogged || !userId) return
-
     api.get(`/api/users/${userId}`)
-      .then((res) => {
-        setUser(res.data)
-      })
-      .catch((err) => {
-        console.error("Sidebar: Error cargando usuario", err);
-      })
+      .then((res) => { setUser(res.data) })
+      .catch((err) => { console.error("Sidebar error", err); })
   }, [isLogged, userId, setUser]) 
 
   const handleLogout = () => {
     try {
-      localStorage.removeItem("token")
-      localStorage.removeItem("auth-storage")
-      logoutStore()
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false);
-        navigate("/login")
+      localStorage.removeItem("token"); 
+      localStorage.removeItem("auth-storage");
+      logoutStore(); 
+      setSuccess(true);
+      setTimeout(() => { 
+        setSuccess(false); 
+        navigate("/login") 
       }, 2000)
     } catch (error) {
       console.error("Error al cerrar sesión", error);
@@ -67,14 +62,14 @@ const Sidebar = () => {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="md:hidden fixed top-4 right-4 z-50 p-2.5 bg-gray-800/90 backdrop-blur-sm text-cyan-400 rounded-lg border border-gray-700 shadow-xl cursor-pointer"
+        className="md:hidden fixed top-2 right-2 z-50 p-2 bg-gray-800/95 backdrop-blur-sm text-cyan-400 rounded-md border border-gray-700 shadow-2xl cursor-pointer active:scale-95 transition-all"
       >
-        {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 bg-black/60 z-30 md:hidden animate-in fade-in duration-300"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden"
           onClick={() => setOpen(false)}
         ></div>
       )}
@@ -86,7 +81,7 @@ const Sidebar = () => {
         <div className="flex items-center gap-3 px-4 py-6 border-b border-gray-800">
           <img 
             src="https://eva.sudamericano.edu.ec/pluginfile.php/1/theme_moove/logo/1762397214/faviconSuda%20%281%29%20%281%29.png" 
-            alt="Logo" 
+            alt="Logo ITS" 
             className="w-10 h-10 object-contain"
           />
           <div className="flex flex-col">
@@ -125,7 +120,7 @@ const Sidebar = () => {
           {isLogged && (
             <Dialog>
               <DialogTrigger asChild>
-                <button className="flex items-center gap-3 p-3 w-full text-left rounded-lg text-red-400 hover:bg-red-950/30 hover:text-red-300 transition-colors cursor-pointer">
+                <button className="flex items-center gap-3 p-3 w-full text-left rounded-lg text-red-400 hover:bg-red-950/30 transition-colors">
                   <LogOut className="w-5 h-5" />
                   <span>Cerrar Sesión</span>
                 </button>
@@ -133,7 +128,7 @@ const Sidebar = () => {
               <DialogContent className="bg-gray-800 border-gray-700">
                 <DialogHeader>
                   <DialogTitle className="text-white">Confirmar Salida</DialogTitle>
-                  <DialogDescription className="text-gray-300">¿Estás seguro de que deseas cerrar sesión?</DialogDescription>
+                  <DialogDescription className="text-gray-300">¿Deseas cerrar tu sesión?</DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="gap-2">
                   <DialogClose asChild><Button variant="ghost" className="text-white">Cancelar</Button></DialogClose>
@@ -146,26 +141,23 @@ const Sidebar = () => {
       </aside>
 
       {success && (
-        <Alert className="fixed top-4 right-4 z-[100] w-auto bg-green-600 border-none text-white shadow-2xl animate-in slide-in-from-top-full">
+        <Alert className="fixed top-4 right-4 z-[100] w-auto bg-green-600 text-white shadow-2xl animate-in slide-in-from-top-full border-none">
           <CheckCircle2Icon className="h-4 w-4" />
           <AlertTitle>¡Éxito!</AlertTitle>
-          <AlertDescription>Se ha cerrado la sesión correctamente.</AlertDescription>
+          <AlertDescription>Sesión cerrada.</AlertDescription>
         </Alert>
       )}
     </>
   )
 }
 
-// CORRECCIÓN: Se cambió 'React.ComponentType<LucideProps>' por 'any' para evitar el error de LucideProps no usado
 const NavItem = ({ to, icon: Icon, label, onClick }: { to: string; icon: any; label: string; onClick?: () => void }) => (
   <NavLink
     to={to}
     onClick={onClick}
     className={({ isActive }) =>
       `flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-        isActive 
-          ? "bg-cyan-600/20 text-cyan-400 border-r-4 border-cyan-500 shadow-[inset_0_0_10px_rgba(6,182,212,0.1)]" 
-          : "hover:bg-gray-800/50 text-gray-400 hover:text-gray-200"
+        isActive ? "bg-cyan-600/20 text-cyan-400 border-r-4 border-cyan-500" : "hover:bg-gray-800/50 text-gray-400"
       }`
     }
   >
@@ -174,4 +166,4 @@ const NavItem = ({ to, icon: Icon, label, onClick }: { to: string; icon: any; la
   </NavLink>
 )
 
-export default Sidebar
+export default Sidebar;
