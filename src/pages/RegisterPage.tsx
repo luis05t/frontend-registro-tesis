@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom" // Añadido para las alertas flotantes
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import api from "@/api/axios"
 import { useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Check, AlertCircleIcon } from "lucide-react"
+import { Eye, EyeOff, Check, AlertCircleIcon, CheckCircle2 } from "lucide-react" // Añadido CheckCircle2
 import { Link } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
@@ -13,6 +14,9 @@ type Career = {
   id: string
   name: string
 }
+
+// 1. VALIDACIÓN ESTRICTA DE DOMINIOS (MANTENIDA)
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@((gmail|outlook|hotmail|yahoo|icloud|live|msn|me|zoho)\.com|(yahoo)\.es|sudamericano\.edu\.ec|.*\.(edu\.ec|gob\.ec|org\.ec|ec|edu|gob|gov))$/i;
 
 const RegisterPage = () => {
   const navigate = useNavigate()
@@ -26,13 +30,14 @@ const RegisterPage = () => {
   
   // Estados de interfaz
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false) // Nuevo estado para éxito
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   // Estados de errores específicos
   const [errorAlert, setErrorAlert] = useState(false)
-  const [errorMessage, setErrorMessage] = useState("") // Para dinámicamente cambiar entre "Ya registrado" o "Inválido"
-  const [emailError, setEmailError] = useState(false) // Para poner el borde en rojo
+  const [errorMessage, setErrorMessage] = useState("") 
+  const [emailError, setEmailError] = useState(false) 
   const [validationError, setValidationError] = useState(false)
   const [matchError, setMatchError] = useState(false)
   
@@ -67,6 +72,15 @@ const RegisterPage = () => {
     setEmailError(false);
     setErrorAlert(false);
 
+    // 2. VALIDAR FORMATO DE CORREO ANTES DE ENVIAR (Frontend)
+    if (!EMAIL_REGEX.test(email)) {
+        setErrorMessage("Correo incorrecto"); 
+        setEmailError(true);
+        setErrorAlert(true);
+        setTimeout(() => setErrorAlert(false), 4000);
+        return;
+    }
+
     if (!isPasswordValid) {
       setValidationError(true);
       setTimeout(() => setValidationError(false), 3000);
@@ -94,18 +108,35 @@ const RegisterPage = () => {
         careerId
       })
       
-      navigate("/login")
+      // MOSTRAR MENSAJE DE ÉXITO
+      setSuccess(true);
+      
+      // Esperar 2 segundos para redirigir
+      setTimeout(() => {
+        navigate("/login")
+      }, 2000);
+
     } catch (error: any) {
       const backendMessage = error.response?.data?.message || "";
       console.error('Error en el registro:', backendMessage);
 
-      // --- LÓGICA DE DETECCIÓN DE ERRORES DE EMAIL ---
-      if (backendMessage.includes("ya se encuentra registrado")) {
-        setErrorMessage("Este correo ya está registrado.");
+      // --- 3. LÓGICA DE DETECCIÓN DE ERRORES (VISUAL) ---
+      const msgLower = backendMessage.toLowerCase();
+
+      // Caso A: Correo duplicado
+      if (msgLower.includes("ya se encuentra registrado") || msgLower.includes("already exists") || msgLower.includes("duplicado")) {
+        setErrorMessage("Correo ya registrado");
         setEmailError(true);
       } 
-      else if (backendMessage.includes("no es válido") || backendMessage.includes("no existe")) {
-        setErrorMessage("El correo ingresado no existe o es inválido.");
+      // Caso B: Errores de validación de dominio o inexistente (Backend reject)
+      else if (
+          msgLower.includes("no es válido") || 
+          msgLower.includes("no existe") || 
+          msgLower.includes("inválido") || 
+          msgLower.includes("dominio") || 
+          msgLower.includes("permitido")
+      ) {
+        setErrorMessage("Correo incorrecto");
         setEmailError(true);
       } 
       else {
@@ -115,7 +146,6 @@ const RegisterPage = () => {
       setErrorAlert(true);
       setLoading(false);
       
-      // El alerta se quita solo en 4 segundos, pero el borde rojo se queda hasta que escriba
       setTimeout(() => setErrorAlert(false), 4000);
     }
   }
@@ -129,6 +159,57 @@ const RegisterPage = () => {
 
   return (
     <>
+      {/* ALERTAS DINÁMICAS EN PORTAL (Para que siempre floten arriba) */}
+      {createPortal(
+        <>
+          {/* MENSAJE DE ÉXITO */}
+          {success && (
+            <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
+              <Alert className="w-auto bg-green-600 border-green-500 text-white shadow-2xl flex items-center gap-3 pr-6">
+                <CheckCircle2 className="h-6 w-6 text-white" />
+                <div>
+                  <AlertTitle className="text-white font-bold text-lg">Éxito</AlertTitle>
+                  <AlertDescription className="text-white/90 font-medium text-base">Registrado correctamente</AlertDescription>
+                </div>
+              </Alert>
+            </div>
+          )}
+
+          {errorAlert && (
+            <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
+              <Alert className="w-auto bg-red-700 text-white border-none shadow-2xl flex items-center gap-3 pr-6 py-2">
+                <AlertCircleIcon className="h-4 w-4 text-white" />
+                <div>
+                  <AlertTitle className="text-white font-bold text-xs">Error</AlertTitle>
+                  <AlertDescription className="text-white/90 text-[10px]">{errorMessage}</AlertDescription>
+                </div>
+              </Alert>
+            </div>
+          )}
+
+          {validationError && (
+            <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
+              <Alert className="w-auto bg-orange-600 text-white border-none shadow-2xl z-[100] py-2">
+                <AlertCircleIcon className="h-4 w-4" />
+                <AlertTitle className="text-xs font-bold">Seguridad Insuficiente</AlertTitle>
+                <AlertDescription className="text-[10px]">La contraseña no cumple con los requisitos.</AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          {matchError && (
+            <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
+              <Alert className="w-auto bg-red-600 text-white border-none shadow-2xl z-[100] py-2">
+                <AlertCircleIcon className="h-4 w-4" />
+                <AlertTitle className="text-xs font-bold">Error de Contraseña</AlertTitle>
+                <AlertDescription className="text-[10px]">Las contraseñas no coinciden.</AlertDescription>
+              </Alert>
+            </div>
+          )}
+        </>,
+        document.body
+      )}
+
       <div className="flex items-center justify-center min-h-screen bg-gray-900 p-4">
         <form onSubmit={handleRegister} className="w-full max-w-sm p-8 bg-gray-800 rounded-2xl shadow-lg space-y-5 text-gray-100">
           <div className="space-y-2 text-center">
@@ -157,13 +238,13 @@ const RegisterPage = () => {
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                if(emailError) setEmailError(false); // Quitar rojo al escribir
+                if(emailError) setEmailError(false); 
               }}
               className={`bg-gray-700 text-white placeholder-gray-500 focus:border-cyan-400 ${
                 emailError ? "border-red-500 ring-1 ring-red-500" : "border-gray-600"
               }`}
             />
-            {emailError && <p className="text-[10px] text-red-500 font-medium ml-1">{errorMessage}</p>}
+            {emailError && <p className="text-[11px] text-red-500 font-bold ml-1">{errorMessage}</p>}
           </div>
 
           {/* CARRERA */}
@@ -241,8 +322,8 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-6 mt-4" disabled={loading}>
-            {loading ? "Procesando registro..." : "Registrarse"}
+          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-6 mt-4" disabled={loading || success}>
+            {loading ? "Procesando registro..." : success ? "¡Registrado!" : "Registrarse"}
           </Button>
           
           <p className="text-center text-sm text-gray-400">
@@ -254,32 +335,7 @@ const RegisterPage = () => {
         </form>
       </div>
 
-      {/* ALERTAS DINÁMICAS */}
-      {errorAlert && (
-        <Alert className="fixed top-4 right-4 w-auto bg-red-700 text-white border-none shadow-2xl z-[100] animate-in fade-in slide-in-from-top-4">
-          <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {validationError && (
-        <Alert className="fixed top-4 right-4 w-auto bg-orange-600 text-white border-none shadow-2xl z-[100]">
-          <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Seguridad Insuficiente</AlertTitle>
-          <AlertDescription>La contraseña no cumple con los requisitos.</AlertDescription>
-        </Alert>
-      )}
-
-      {matchError && (
-        <Alert className="fixed top-4 right-4 w-auto bg-red-600 text-white border-none shadow-2xl z-[100]">
-          <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Error de Contraseña</AlertTitle>
-          <AlertDescription>Las contraseñas no coinciden.</AlertDescription>
-        </Alert>
-      )}
-
-      <LoadingOverlay isVisible={loading} message="Creando tu cuenta de lector..." />
+      <LoadingOverlay isVisible={loading} message="Creando cuenta..." />
     </>
   )
 }

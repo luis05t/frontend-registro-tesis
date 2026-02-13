@@ -117,7 +117,7 @@ export function BulkRegisterModal() {
                 <CheckCircle2 className="h-6 w-6 text-white" />
                 <div>
                   <AlertTitle className="text-white font-bold text-lg">Éxito</AlertTitle>
-                  <AlertDescription className="text-white/90 font-medium text-base">Carga masiva completada.</AlertDescription>
+                  <AlertDescription className="text-white/90 font-medium text-base">Carga completada.</AlertDescription>
                 </div>
               </Alert>
             </div>

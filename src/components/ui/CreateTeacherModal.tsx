@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom"; 
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger, 
-  DialogFooter
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,21 +10,20 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage 
 } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import api from "@/api/axios";
 
-// Esquema de validación estricto
+// 1. REGEX ESTRICTA
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@((gmail|outlook|hotmail|yahoo|icloud|live|msn|me|zoho)\.com|(yahoo)\.es|sudamericano\.edu\.ec|.*\.(edu\.ec|gob\.ec|org\.ec|ec|edu|gob|gov))$/i;
+
 const teacherSchema = z.object({
   name: z.string().min(3, "El nombre es muy corto"),
-  email: z.string().email("Correo inválido"),
+  email: z.string()
+    .email("Formato de correo inválido")
+    .regex(EMAIL_REGEX, "Correo incorrecto. (Dominio no permitido)"),
   password: z.string()
     .min(6, "Mínimo 6 caracteres")
     .regex(/[A-Z]/, "Falta mayúscula")
@@ -46,7 +40,7 @@ const teacherSchema = z.object({
 export function CreateTeacherModal() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  // Visibilidad de contraseña (empiezan en false)
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [careers, setCareers] = useState<{id: string, name: string}[]>([]);
@@ -64,14 +58,11 @@ export function CreateTeacherModal() {
   const watchPassword = form.watch("password") || "";
   const watchConfirm = form.watch("confirmPassword") || "";
 
-  // Validaciones visuales en tiempo real
   const hasMinLength = watchPassword.length >= 6;
   const hasUppercase = /[A-Z]/.test(watchPassword);
   const hasLowercase = /[a-z]/.test(watchPassword);
   const hasNumber = /[0-9]/.test(watchPassword);
   const hasSymbol = /[^A-Za-z0-9]/.test(watchPassword);
-  
-  // Lógica de coincidencia para el color rojo
   const passwordsMatch = watchPassword !== "" && watchPassword === watchConfirm;
   const showMatchError = watchConfirm !== "" && watchPassword !== watchConfirm;
 
@@ -90,6 +81,15 @@ export function CreateTeacherModal() {
     }
   }, [open]);
 
+  // 2. FUNCIÓN PARA MOSTRAR ALERTA CUANDO FALLA LA VALIDACIÓN LOCAL (REGEX)
+  const onInvalid = (errors: any) => {
+    if (errors.email) {
+      setErrorMessage("Correo incorrecto"); // Mensaje para la alerta de arriba
+      setErrorAlert(true);
+      setTimeout(() => setErrorAlert(false), 4000);
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof teacherSchema>) => {
     if (!teacherRoleId) return;
     setLoading(true);
@@ -100,7 +100,27 @@ export function CreateTeacherModal() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 4000);
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.message || "Error al registrar");
+      const msg = error.response?.data?.message || "Error al registrar";
+      const msgLower = msg.toLowerCase();
+      
+      // 3. MANEJO DE ERRORES DEL BACKEND (Duplicado o inválido)
+      if (msgLower.includes("ya se encuentra registrado") || msgLower.includes("already exists")) {
+        form.setError("email", { type: "manual", message: "Correo ya registrado" });
+        setErrorMessage("Correo ya registrado"); // Alerta de arriba
+      } 
+      else if (
+        msgLower.includes("inválido") || 
+        msgLower.includes("dominio") || 
+        msgLower.includes("permitido") || 
+        msgLower.includes("no existe")
+      ) {
+        form.setError("email", { type: "manual", message: "Correo incorrecto" });
+        setErrorMessage("Correo incorrecto"); // Alerta de arriba
+      }
+      else {
+        setErrorMessage(msg);
+      }
+      
       setErrorAlert(true);
       setTimeout(() => setErrorAlert(false), 4000);
     } finally {
@@ -108,12 +128,11 @@ export function CreateTeacherModal() {
     }
   };
 
-  // Función para registrar al presionar Enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      // Si el modal está abierto y no está cargando, enviamos el formulario
       if (!loading) {
-        form.handleSubmit(onSubmit)();
+        // Pasamos onInvalid aquí también
+        form.handleSubmit(onSubmit, onInvalid)();
       }
     }
   };
@@ -122,7 +141,6 @@ export function CreateTeacherModal() {
     <>
       {createPortal(
         <>
-          {/* ÉXITO: Tamaño Normal (Lg) */}
           {success && (
             <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
               <Alert className="w-auto bg-green-600 border-green-500 text-white shadow-2xl flex items-center gap-3 pr-6">
@@ -135,7 +153,7 @@ export function CreateTeacherModal() {
             </div>
           )}
 
-          {/* ERROR: Tamaño Pequeño (Xs) */}
+          {/* ALERTA ROJA EN LA ESQUINA */}
           {errorAlert && (
             <div className="fixed top-5 right-5 z-[10002] animate-in slide-in-from-right fade-in duration-300">
               <Alert className="w-auto bg-red-600 border-red-500 text-white shadow-2xl flex items-center gap-3 pr-6 py-2">
@@ -169,11 +187,8 @@ export function CreateTeacherModal() {
           </DialogHeader>
           
           <Form {...form}>
-            <form 
-              onSubmit={form.handleSubmit(onSubmit)} 
-              onKeyDown={handleKeyDown}
-              className="space-y-4 py-2"
-            >
+            {/* AQUI ESTÁ LA CLAVE: Pasamos onInvalid como segundo argumento */}
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} onKeyDown={handleKeyDown} className="space-y-4 py-2">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Nombre Completo</FormLabel>
@@ -182,11 +197,20 @@ export function CreateTeacherModal() {
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="email" render={({ field }) => (
+              <FormField control={form.control} name="email" render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel className="text-xs">Correo Institucional</FormLabel>
-                  <FormControl><Input placeholder="docente@sudamericano.edu.ec" type="email" className="bg-gray-900 border-gray-600 h-9 text-sm" {...field} /></FormControl>
-                  <FormMessage className="text-[10px]" />
+                  <FormControl>
+                    <Input 
+                      placeholder="docente@sudamericano.edu.ec" 
+                      type="email" 
+                      // Borde ROJO si hay error
+                      className={`bg-gray-900 h-9 text-sm ${fieldState.error ? "border-red-500 ring-1 ring-red-500" : "border-gray-600"}`} 
+                      {...field} 
+                    />
+                  </FormControl>
+                  {/* Mensaje ROJO abajo */}
+                  <FormMessage className="text-[10px] text-red-500 font-bold" />
                 </FormItem>
               )} />
 
@@ -202,7 +226,6 @@ export function CreateTeacherModal() {
                           {...field} 
                         />
                       </FormControl>
-                      {/* Icono empieza cerrado (EyeOff) */}
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
                         {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
@@ -221,7 +244,6 @@ export function CreateTeacherModal() {
                           {...field} 
                         />
                       </FormControl>
-                      {/* Icono empieza cerrado (EyeOff) */}
                       <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
                         {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
@@ -229,7 +251,6 @@ export function CreateTeacherModal() {
                   </FormItem>
                 )} />
 
-                {/* Panel de Validación de Seguridad */}
                 <div className="bg-gray-900/50 p-2 rounded border border-gray-700 grid grid-cols-2 gap-x-2 gap-y-1">
                    <p className="col-span-2 text-[9px] font-bold text-gray-500 uppercase mb-1 tracking-wider">Requisitos:</p>
                    <RequirementItem label="Mín. 6 caracteres" met={hasMinLength} />
@@ -237,7 +258,6 @@ export function CreateTeacherModal() {
                    <RequirementItem label="Minúscula" met={hasLowercase} />
                    <RequirementItem label="Número" met={hasNumber} />
                    <RequirementItem label="Símbolo" met={hasSymbol} />
-                   {/* Sale en ROJO si no coinciden */}
                    <RequirementItem label="Las contraseñas coinciden" met={passwordsMatch} error={showMatchError} />
                 </div>
               </div>
