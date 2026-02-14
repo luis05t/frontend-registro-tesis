@@ -173,7 +173,12 @@ const ProyectPage = () => {
   
   const [filterStatus, setFilterStatus] = useState("Todo");
   const [filterStatusUserProjects, setFilterStatusUserProjects] = useState("Todo")
-  const statusOptions = ["Todo", "en progreso", "completado"];
+  
+  // CORRECCIÓN: "Pendiente" al final de la lista
+  const statusOptions = isAdminOrTeacher 
+    ? ["Todo", "en progreso", "completado", "pendiente"] 
+    : ["Todo", "en progreso", "completado"];
+
   const statusUserProjects = ["Todo", "Mis proyectos"]
 
   const [viewProject, setViewProject] = useState<Project | null>(null)
@@ -192,6 +197,26 @@ const ProyectPage = () => {
   const [editSkillDesc, setEditSkillDesc] = useState('')
   const [skillToDelete, setSkillToDelete] = useState<Skill | null>(null)
   const [visibleDescriptions, setVisibleDescriptions] = useState<Record<string, boolean>>({})
+
+  const getComputedStatus = (project: Project) => {
+    if (project.status === 'pendiente') return 'pendiente';
+    if (!project.startDate || !project.endDate) return project.status;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); 
+    const start = new Date(project.startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(project.endDate);
+    end.setHours(0, 0, 0, 0);
+
+    if (now > end) {
+      return 'completado'; 
+    } else if (now >= start && now <= end) {
+      return 'en progreso'; 
+    } else {
+      if (now >= start) return 'en progreso';
+      return project.status; 
+    }
+  };
 
   const createSkillForm = useForm<z.infer<typeof skillSchema>>({
     resolver: zodResolver(skillSchema),
@@ -770,9 +795,7 @@ const ProyectPage = () => {
       <FormField control={form.control} name="link" render={({ field }) => (
         <FormItem className="md:col-span-2"><FormLabel className="text-gray-300 flex items-center gap-2"><LinkIcon className="w-3 h-3" /> Enlace de Repositorio/Drive</FormLabel><FormControl><Input className="bg-gray-900 border-gray-600 mt-1" placeholder="https://..." {...field} /></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
       )} />
-      <FormField control={form.control} name="status" render={({ field }) => (
-        <FormItem className="md:col-span-2"><FormLabel className="text-gray-300">Estado del proyecto</FormLabel><FormControl><select className="w-full mt-1 h-9 rounded-md bg-gray-900 border border-gray-600 text-sm text-white px-3" {...field}><option value="">Selecciona un estado...</option><option value="en progreso">En progreso</option><option value="completado">Completado</option></select></FormControl><FormMessage className="text-red-500 text-xs" /></FormItem>
-      )} />
+      {/* CAMPO DE ESTADO ELIMINADO TANTO PARA EDITAR COMO PARA CREAR */}
     </div>
   )
 
@@ -898,24 +921,52 @@ const ProyectPage = () => {
                         const careerName = careers.find((c) => c.id === p.careerId)?.name;
                         const term = search.toLowerCase();
                         const projectSkillsList = getProjectSkillsDisplay(p.id);
+                        
+                        // LÓGICA DE FILTRADO CON EL ESTADO CALCULADO
+                        const currentStatus = getComputedStatus(p);
+
                         const matchesSearch = (p.name?.toLowerCase().includes(term) || p.description?.toLowerCase().includes(term) || careerName?.toLowerCase().includes(term) || projectSkillsList.some(s => s.name.toLowerCase().includes(term)));
-                        const matchesStatus = filterStatus === "Todo" || p.status === filterStatus;
+                        
+                        // USA EL ESTADO CALCULADO
+                        const matchesStatus = filterStatus === "Todo" || currentStatus === filterStatus;
+                        
                         const isOwner = p.createdBy === userId || userProjects.some(up => up.id === p.id);
                         const matchesUser = filterStatusUserProjects === "Todo" || (filterStatusUserProjects === "Mis proyectos" && isOwner);
-                        if (!isAdmin && !isOwner && p.status === "pendiente") return false;
+                        
+                        // Permitimos que Admins Y PROFESORES vean pendientes.
+                        if (!isAdminOrTeacher && !isOwner && p.status === "pendiente") return false;
+
                         return matchesSearch && matchesStatus && matchesUser;
                       }).map((p) => {
                         const careerName = careers.find((c) => c.id === p.careerId)?.name;
                         const isOwner = p.createdBy === userId || userProjects.some((up) => up.id === p.id);
                         const mySkills = getProjectSkillsDisplay(p.id);
                         const { link, textItems } = parseDeliverables(p.deliverables || []);
+                        
+                        // CALCULAR ESTADO PARA MOSTRAR
+                        const displayStatus = getComputedStatus(p);
+
                         return (
                           <TableRow key={p.id} className={`border-gray-700 transition-colors group align-top cursor-pointer ${p.status === 'pendiente' ? 'bg-red-950/20 hover:bg-red-900/30' : 'hover:bg-gray-700/30' }`} onClick={() => { setViewProject(p); setIsViewOpen(true); }}>
                             <TableCell className="py-4 align-top"><div className="space-y-2"><p className="text-white font-bold text-lg leading-tight truncate w-[375px]" title={p.name}>{p.name}</p><div className="space-y-1 text-sm text-gray-400"><div className="flex items-center gap-2"><GraduationCap className="w-3 h-3" /> {careerName || "Sin Carrera"}</div><div className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> {p.cycle}</div><div className="flex items-center gap-2"><CalendarIcon className="w-3 h-3" /> {p.academic_period}</div><div className="flex items-center gap-2"><User2 className="w-3 h-3" />{p.user?.name || "Desconocido"}</div></div></div></TableCell>
                             <TableCell className="py-4 align-top"><div className="space-y-3 w-[300px] whitespace-normal"><div><span className="text-xs font-semibold text-gray-500 uppercase">Problemática</span><p className="text-sm text-gray-300 leading-relaxed break-words line-clamp-3">{p.description}</p></div>{p.summary && (<div className="bg-gray-900/40 p-2 rounded border border-gray-700/50"><span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Resumen</span><p className="text-xs text-gray-400 italic break-words line-clamp-2">{p.summary}</p></div>)}{mySkills.length > 0 && (<div className="flex flex-wrap gap-1.5 mt-3">{mySkills.map(sk => (<Badge key={sk.id} variant="secondary" className="bg-cyan-950/50 text-cyan-300 border border-cyan-800/50 hover:bg-cyan-900/60 hover:text-cyan-200 text-[10px] px-2 py-0.5 transition-colors">{sk.name}</Badge>))}</div>)}</div></TableCell>
                             <TableCell className="py-4 align-top max-w-[350px]">{p.objectives?.length > 0 ? (<div className="space-y-1">{p.objectives.slice(0, 3).map((obj, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{obj}</div>))}{p.objectives.length > 3 && <div className="text-xs text-cyan-500 italic">... y {p.objectives.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin objetivos</span>}</TableCell>
                             <TableCell className="py-4 align-top max-w-[350px]">{textItems?.length > 0 ? (<div className="space-y-1">{textItems.slice(0, 3).map((del, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{del}</div>))}{textItems.length > 3 && <div className="text-xs text-cyan-500 italic">... y {textItems.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin entregables</span>}{link && (<div className="mt-2"><a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 hover:underline" onClick={(e) => e.stopPropagation()}><LinkIcon className="w-3 h-3" /> Ver enlace</a></div>)}</TableCell>
-                            <TableCell className="py-4 align-top"><div className="space-y-3">{p.status === 'pendiente' ? (<Badge variant="outline" className="text-red-400 border-red-900 bg-red-900/20 flex w-fit items-center gap-1"><Clock className="w-3 h-3" /> Pendiente</Badge>) : (<Badge variant="outline" className={`${p.status === 'completado' ? 'text-green-400 border-green-900 bg-green-900/20' : 'text-cyan-400 border-cyan-900 bg-cyan-900/20'}`}>{capitalizeFirst(p.status)}</Badge>)}<div className="text-xs text-gray-400"><div className="mb-1"><span className="text-gray-600">Inicio:</span> <br />{formatDate(p.startDate)}</div><div><span className="text-gray-600">Fin:</span> <br />{formatDate(p.endDate)}</div></div></div></TableCell>
+                            <TableCell className="py-4 align-top">
+                              <div className="space-y-3">
+                                {displayStatus === 'pendiente' ? (
+                                  <Badge variant="outline" className="text-red-400 border-red-900 bg-red-900/20 flex w-fit items-center gap-1"><Clock className="w-3 h-3" /> Pendiente</Badge>
+                                ) : (
+                                  <Badge variant="outline" className={`${displayStatus === 'completado' ? 'text-green-400 border-green-900 bg-green-900/20' : 'text-cyan-400 border-cyan-900 bg-cyan-900/20'}`}>
+                                    {capitalizeFirst(displayStatus)}
+                                  </Badge>
+                                )}
+                                <div className="text-xs text-gray-400">
+                                  <div className="mb-1"><span className="text-gray-600">Inicio:</span> <br />{formatDate(p.startDate)}</div>
+                                  <div><span className="text-gray-600">Fin:</span> <br />{formatDate(p.endDate)}</div>
+                                </div>
+                              </div>
+                            </TableCell>
                             {isAdminOrTeacher && (
                               <TableCell className="py-4 align-top text-right">
                                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
