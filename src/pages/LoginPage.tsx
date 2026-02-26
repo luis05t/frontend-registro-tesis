@@ -55,14 +55,25 @@ const LoginPage = () => {
     
     try {
       const res = await api.post("/api/auth/login", { email, password })
-      const { accessToken, userId, userRole } = res.data
+      
+      // === CAMBIO AQUÍ: Capturamos needsPasswordChange del backend ===
+      const { accessToken, userId, userRole, needsPasswordChange } = res.data
 
       localStorage.setItem("token", accessToken)
       localStorage.setItem("id", userId)
       localStorage.setItem("role", userRole)
+      localStorage.setItem("needsPasswordChange", String(needsPasswordChange)) // Guardamos la bandera
+      
       login(accessToken, userId, userRole)
       
-      navigate("/dashboard")
+      // === CAMBIO AQUÍ: Redirección condicional de seguridad ===
+      if (needsPasswordChange && userRole === 'TEACHER') {
+        // Obligamos al docente a cambiar su contraseña
+        navigate("/profile?forcePasswordChange=true")
+      } else {
+        // Alumnos y administradores pasan directo
+        navigate("/dashboard")
+      }
       
     } catch (err: any) {
       console.log(err)
