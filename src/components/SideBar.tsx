@@ -3,7 +3,7 @@ import { NavLink, useNavigate, Link } from "react-router-dom"
 import api from "@/api/axios" 
 import { useAuthStore } from "@/store/authStore"
 import { 
-  Home, User, Settings, LogOut, Menu, X,
+  LogOut, Menu, X,
   CheckCircle2Icon 
 } from "lucide-react"
 // Se eliminó LucideProps y AlertCircleIcon porque no se usaban
@@ -103,9 +103,9 @@ const Sidebar = () => {
         )}
 
         <nav className="flex flex-col gap-1 p-3 mt-4 flex-grow overflow-y-auto custom-scrollbar">
-          <NavItem to="/dashboard" icon={Home} label="Panel de Control" onClick={() => setOpen(false)} />
-          <NavItem to="/profile" icon={User} label="Perfil" onClick={() => setOpen(false)} />
-          <NavItem to="/projects" icon={Settings} label="Proyectos" onClick={() => setOpen(false)} />
+          <NavItem to="/dashboard" icon={MiIconoPanel} label="Panel de Control" onClick={() => setOpen(false)} />
+          <NavItem to="/projects" icon={MiIconoProyectos} label="Proyectos" onClick={() => setOpen(false)} />
+          <NavItem to="/profile" icon={MiIconoPersonalizado} label="Perfil" onClick={() => setOpen(false)} />
 
           {isAdmin && (
              <div className="pt-4 mt-4 border-t border-gray-800">
@@ -150,6 +150,57 @@ const Sidebar = () => {
     </>
   )
 }
+
+// Icono nuevo para Panel de Control
+const MiIconoPanel = ({ className }: { className?: string }) => (
+  <div 
+    className={`${className} bg-current scale-125`} 
+    style={{ 
+      WebkitMaskImage: 'url(/image2.png)', 
+      WebkitMaskSize: 'contain', 
+      WebkitMaskRepeat: 'no-repeat', 
+      WebkitMaskPosition: 'center',
+      maskImage: 'url(/image2.png)',
+      maskSize: 'contain',
+      maskRepeat: 'no-repeat',
+      maskPosition: 'center'
+    }} 
+  />
+);
+
+// Icono para Perfil
+const MiIconoPersonalizado = ({ className }: { className?: string }) => (
+  <div 
+    className={`${className} bg-current scale-150`} 
+    style={{ 
+      WebkitMaskImage: 'url(/image.png)', 
+      WebkitMaskSize: 'contain', 
+      WebkitMaskRepeat: 'no-repeat', 
+      WebkitMaskPosition: 'center',
+      maskImage: 'url(/image.png)',
+      maskSize: 'contain',
+      maskRepeat: 'no-repeat',
+      maskPosition: 'center'
+    }} 
+  />
+);
+
+// Icono nuevo para Proyectos
+const MiIconoProyectos = ({ className }: { className?: string }) => (
+  <div 
+    className={`${className} bg-current scale-150`} 
+    style={{ 
+      WebkitMaskImage: 'url(/image1.png)', 
+      WebkitMaskSize: 'contain', 
+      WebkitMaskRepeat: 'no-repeat', 
+      WebkitMaskPosition: 'center',
+      maskImage: 'url(/image1.png)',
+      maskSize: 'contain',
+      maskRepeat: 'no-repeat',
+      maskPosition: 'center'
+    }} 
+  />
+);
 
 const NavItem = ({ to, icon: Icon, label, onClick }: { to: string; icon: any; label: string; onClick?: () => void }) => (
   <NavLink
