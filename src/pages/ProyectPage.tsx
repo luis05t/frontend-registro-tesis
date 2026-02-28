@@ -34,7 +34,6 @@ import {
   Plus, 
   User2, 
   Check, 
-  Clock, 
   AlertCircleIcon, 
   Search,
   Link as LinkIcon,
@@ -174,10 +173,13 @@ const ProyectPage = () => {
   const [filterStatus, setFilterStatus] = useState("Todo");
   const [filterStatusUserProjects, setFilterStatusUserProjects] = useState("Todo")
   
-  // CORRECCIÓN: "Pendiente" al final de la lista
+  // COMENTADO: Quitamos el estado pendiente del filtro de opciones
+  /*
   const statusOptions = isAdminOrTeacher 
     ? ["Todo", "en progreso", "completado", "pendiente"] 
     : ["Todo", "en progreso", "completado"];
+  */
+  const statusOptions = ["Todo", "en progreso", "completado"];
 
   const statusUserProjects = ["Todo", "Mis proyectos"]
 
@@ -199,7 +201,9 @@ const ProyectPage = () => {
   const [visibleDescriptions, setVisibleDescriptions] = useState<Record<string, boolean>>({})
 
   const getComputedStatus = (project: Project) => {
-    if (project.status === 'pendiente') return 'pendiente';
+    // COMENTADO: Ya no evaluamos ni forzamos el estado a 'pendiente'
+    // if (project.status === 'pendiente') return 'pendiente';
+    
     if (!project.startDate || !project.endDate) return project.status;
     const now = new Date();
     now.setHours(0, 0, 0, 0); 
@@ -445,7 +449,10 @@ const ProyectPage = () => {
       const objectivesArray = values.objectives.split("\n").filter(l => l.trim().length > 0)
       let deliverablesArray = values.deliverables ? values.deliverables.split("\n").filter(l => l.trim().length > 0) : []
       if (values.link && values.link.trim() !== "") { deliverablesArray.push(values.link.trim()); }
-      const initialStatus = "pendiente";
+      
+      // COMENTADO: El estado inicial pasa a ser en progreso directamente
+      // const initialStatus = "pendiente";
+      const initialStatus = "en progreso"; 
 
       const res = await api.post('/api/projects', {
         name: values.name,
@@ -483,7 +490,7 @@ const ProyectPage = () => {
     }
   };
 
-  const handleApproveProject = async (e: React.MouseEvent, project: Project) => {
+  /*const handleApproveProject = async (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     setLoading(true);
     try {
@@ -496,7 +503,7 @@ const ProyectPage = () => {
       showError("Error al aprobar.");
     }
   };
-
+*/
   const handleEditProyect = async (values: z.infer<typeof projectSchema>) => {
     if (!editingProject) return
     setLoading(true)
@@ -933,8 +940,8 @@ const ProyectPage = () => {
                         const isOwner = p.createdBy === userId || userProjects.some(up => up.id === p.id);
                         const matchesUser = filterStatusUserProjects === "Todo" || (filterStatusUserProjects === "Mis proyectos" && isOwner);
                         
-                        // Permitimos que Admins Y PROFESORES vean pendientes.
-                        if (!isAdminOrTeacher && !isOwner && p.status === "pendiente") return false;
+                        // COMENTADO: Permitimos que Admins Y PROFESORES vean pendientes.
+                        // if (!isAdminOrTeacher && !isOwner && p.status === "pendiente") return false;
 
                         return matchesSearch && matchesStatus && matchesUser;
                       }).map((p) => {
@@ -946,21 +953,24 @@ const ProyectPage = () => {
                         // CALCULAR ESTADO PARA MOSTRAR
                         const displayStatus = getComputedStatus(p);
 
+                        // COMENTADO: Quitamos el fondo rojo para pendientes
+                        // ORIGINAL: className={`... ${p.status === 'pendiente' ? 'bg-red-950/20 hover:bg-red-900/30' : 'hover:bg-gray-700/30' }`}
                         return (
-                          <TableRow key={p.id} className={`border-gray-700 transition-colors group align-top cursor-pointer ${p.status === 'pendiente' ? 'bg-red-950/20 hover:bg-red-900/30' : 'hover:bg-gray-700/30' }`} onClick={() => { setViewProject(p); setIsViewOpen(true); }}>
+                          <TableRow key={p.id} className="border-gray-700 transition-colors group align-top cursor-pointer hover:bg-gray-700/30" onClick={() => { setViewProject(p); setIsViewOpen(true); }}>
                             <TableCell className="py-4 align-top"><div className="space-y-2"><p className="text-white font-bold text-lg leading-tight truncate w-[375px]" title={p.name}>{p.name}</p><div className="space-y-1 text-sm text-gray-400"><div className="flex items-center gap-2"><GraduationCap className="w-3 h-3" /> {careerName || "Sin Carrera"}</div><div className="flex items-center gap-2"><BookOpen className="w-3 h-3" /> {p.cycle}</div><div className="flex items-center gap-2"><CalendarIcon className="w-3 h-3" /> {p.academic_period}</div><div className="flex items-center gap-2"><User2 className="w-3 h-3" />{p.user?.name || "Desconocido"}</div></div></div></TableCell>
                             <TableCell className="py-4 align-top"><div className="space-y-3 w-[300px] whitespace-normal"><div><span className="text-xs font-semibold text-gray-500 uppercase">Problemática</span><p className="text-sm text-gray-300 leading-relaxed break-words line-clamp-3">{p.description}</p></div>{p.summary && (<div className="bg-gray-900/40 p-2 rounded border border-gray-700/50"><span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Resumen</span><p className="text-xs text-gray-400 italic break-words line-clamp-2">{p.summary}</p></div>)}{mySkills.length > 0 && (<div className="flex flex-wrap gap-1.5 mt-3">{mySkills.map(sk => (<Badge key={sk.id} variant="secondary" className="bg-cyan-950/50 text-cyan-300 border border-cyan-800/50 hover:bg-cyan-900/60 hover:text-cyan-200 text-[10px] px-2 py-0.5 transition-colors">{sk.name}</Badge>))}</div>)}</div></TableCell>
                             <TableCell className="py-4 align-top max-w-[350px]">{p.objectives?.length > 0 ? (<div className="space-y-1">{p.objectives.slice(0, 3).map((obj, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{obj}</div>))}{p.objectives.length > 3 && <div className="text-xs text-cyan-500 italic">... y {p.objectives.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin objetivos</span>}</TableCell>
                             <TableCell className="py-4 align-top max-w-[350px]">{textItems?.length > 0 ? (<div className="space-y-1">{textItems.slice(0, 3).map((del, i) => (<div key={i} className="text-sm text-gray-400 leading-snug break-words whitespace-normal line-clamp-2">{del}</div>))}{textItems.length > 3 && <div className="text-xs text-cyan-500 italic">... y {textItems.length - 3} más</div>}</div>) : <span className="text-xs text-gray-600 italic">Sin entregables</span>}{link && (<div className="mt-2"><a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 hover:underline" onClick={(e) => e.stopPropagation()}><LinkIcon className="w-3 h-3" /> Ver enlace</a></div>)}</TableCell>
                             <TableCell className="py-4 align-top">
                               <div className="space-y-3">
-                                {displayStatus === 'pendiente' ? (
+                                {/* COMENTADO: Ya no se renderiza el badge de pendiente */}
+                                {/* {displayStatus === 'pendiente' ? (
                                   <Badge variant="outline" className="text-red-400 border-red-900 bg-red-900/20 flex w-fit items-center gap-1"><Clock className="w-3 h-3" /> Pendiente</Badge>
-                                ) : (
+                                ) : ( */}
                                   <Badge variant="outline" className={`${displayStatus === 'completado' ? 'text-green-400 border-green-900 bg-green-900/20' : 'text-cyan-400 border-cyan-900 bg-cyan-900/20'}`}>
                                     {capitalizeFirst(displayStatus)}
                                   </Badge>
-                                )}
+                                {/* )} */}
                                 <div className="text-xs text-gray-400">
                                   <div className="mb-1"><span className="text-gray-600">Inicio:</span> <br />{formatDate(p.startDate)}</div>
                                   <div><span className="text-gray-600">Fin:</span> <br />{formatDate(p.endDate)}</div>
@@ -970,7 +980,8 @@ const ProyectPage = () => {
                             {isAdminOrTeacher && (
                               <TableCell className="py-4 align-top text-right">
                                 <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                  {isAdmin && p.status === 'pendiente' && (<Button size="icon" className="h-8 w-8 bg-green-600 hover:bg-green-700 text-white mr-2" onClick={(e) => handleApproveProject(e, p)}><Check className="w-4 h-4" /></Button>)}
+                                  {/* COMENTADO: Botón de aprobar proyecto ya no es necesario */}
+                                  {/* {isAdmin && p.status === 'pendiente' && (<Button size="icon" className="h-8 w-8 bg-green-600 hover:bg-green-700 text-white mr-2" onClick={(e) => handleApproveProject(e, p)}><Check className="w-4 h-4" /></Button>)} */}
                                   {(isAdmin || isOwner) && (<Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-500 hover:text-cyan-400 hover:bg-cyan-900/20" onClick={() => loadProjectData(p)}><Pencil className="w-4 h-4" /></Button>)}
                                   {isAdmin && (<Dialog><DialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-900/20"><Trash2 className="w-4 h-4" /></Button></DialogTrigger><DialogContent className="bg-gray-800 border-gray-700 text-white"><DialogHeader><DialogTitle>¿Eliminar Proyecto?</DialogTitle></DialogHeader><DialogDescription className="text-gray-400">Esta acción no se puede deshacer.</DialogDescription><DialogFooter><Button className="bg-red-600 hover:bg-red-700" onClick={(e) => handleDeleteProyect(e, p.id)}>Confirmar</Button></DialogFooter></DialogContent></Dialog>)}
                                 </div>

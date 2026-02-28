@@ -79,9 +79,12 @@ const Dashboard = () => {
           
           let visibleProjects = projectsData;
 
+          // COMENTADO: Ya no ocultamos los proyectos pendientes para los usuarios normales
+          /*
           if (!isAdmin) {
              visibleProjects = projectsData.filter((p: any) => p.status !== 'pendiente')
           }
+          */
 
           setStats(prev => ({ ...prev, totalProjects: visibleProjects.length }))
           
@@ -130,7 +133,9 @@ const Dashboard = () => {
       icon: FolderGit2, 
       color: "text-cyan-500", 
       bg: "bg-cyan-500/10",
-      desc: isAdmin ? "Total (incluye pendientes)" : "Proyectos validados"
+      // COMENTADO: Quitamos la mención a los pendientes
+      // desc: isAdmin ? "Total (incluye pendientes)" : "Proyectos validados"
+      desc: "Total de proyectos en curso"
     },
     { 
       key: "careers",
@@ -163,11 +168,12 @@ const Dashboard = () => {
                   <FolderGit2 className="w-5 h-5 text-cyan-500 mr-3" />
                   <span className="text-sm font-medium text-gray-200">{project.name}</span>
                 </div>
-                {project.status === 'pendiente' && (
+                {/* COMENTADO: Ocultamos el badge de 'Pendiente' del popup rápido de proyectos */}
+                {/* {project.status === 'pendiente' && (
                    <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-800 bg-yellow-900/20">
                      Pendiente
                    </Badge>
-                )}
+                )} */}
               </div>
              ))
           ) : (
@@ -256,7 +262,7 @@ const Dashboard = () => {
                                 </p>
                                 <h3 className="text-3xl font-bold text-white mt-2 group-hover/nav:text-cyan-400 transition-colors">
                                   {stat.value}
-                                </h3>
+                               </h3>
                               </div>
 
                               <DialogTrigger asChild>
@@ -410,15 +416,16 @@ const Dashboard = () => {
                                   </div>
                                 </div>
 
-                                {proj.status === 'pendiente' ? (
+                                {/* COMENTADO: Desactivamos la lógica del badge pendiente en el listado */}
+                                {/* {proj.status === 'pendiente' ? (
                                   <Badge variant="outline" className="shrink-0 text-xs text-yellow-500 border-yellow-800 bg-yellow-900/10">
                                     Pendiente
                                   </Badge>
-                                ) : (
+                                ) : ( */}
                                   <Badge variant="outline" className={`shrink-0 text-xs ${proj.status === 'Finalizado' ? 'text-green-400 border-green-800' : 'text-cyan-400 border-cyan-800'}`}>
                                     {proj.status || 'Activo'}
                                   </Badge>
-                                )}
+                                {/* )} */}
 
                               </div>
                             </DialogTrigger>
@@ -445,15 +452,18 @@ const Dashboard = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="p-3 bg-gray-800 rounded-lg">
                                     <span className="text-xs text-gray-500 block mb-1">Estado</span>
-                                    {proj.status === 'pendiente' ? (
+                                    
+                                    {/* COMENTADO: Desactivamos la lógica del badge pendiente en el dialog */}
+                                    {/* {proj.status === 'pendiente' ? (
                                       <Badge className="bg-yellow-500/20 text-yellow-400">
                                         Pendiente
                                       </Badge>
-                                    ) : (
+                                    ) : ( */}
                                       <Badge className={proj.status === 'Finalizado' ? 'bg-green-500/20 text-green-400' : 'bg-cyan-500/20 text-cyan-400'}>
                                         {proj.status || 'En Progreso'}
                                       </Badge>
-                                    )}
+                                    {/* )} */}
+
                                   </div>
                                   <div className="p-3 bg-gray-800 rounded-lg">
                                     <span className="text-xs text-gray-500 block mb-1">Fecha de Inicio</span>
